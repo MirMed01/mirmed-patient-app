@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Мой кабинет</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/*
+ * МирМед · Кабинет пациента — Telegram Mini App.
+ * Один файл, без сборки. Данные приходят в URL-фрагменте (#d=…) от бота
+ * врача и кэшируются в localStorage — хостинг статики их НЕ видит,
+ * после первого открытия кабинет работает офлайн.
+ */
+:root {
+  --bg: var(--tg-theme-bg-color, #f2f2f7);
+  --card: var(--tg-theme-secondary-bg-color, #ffffff);
+  --text: var(--tg-theme-text-color, #1c1c1e);
+  --hint: var(--tg-theme-hint-color, #8e8e93);
+  --accent: var(--tg-theme-button-color, #007aff);
+  --accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --danger: #ff3b30;
+  --ok: #34c759;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; padding: 12px 14px 90px;
+  font-family: -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.45;
+}
+h1 { font-size: 22px; margin: 6px 2px 2px; letter-spacing: -0.02em; }
+.sub { color: var(--hint); font-size: 13px; margin: 0 2px 14px; }
+.card {
+  background: var(--card); border-radius: 16px; padding: 14px 16px;
+  margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.card h2 { font-size: 15px; margin: 0 0 8px; display: flex; align-items: center; gap: 7px; }
+.card .muted { color: var(--hint); font-size: 13px; }
+.row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+button {
+  font: inherit; border: none; border-radius: 12px; padding: 11px 16px;
+  background: var(--accent); color: var(--accent-text); font-weight: 600;
+  cursor: pointer; flex: 1; min-width: 120px;
+}
+button.ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+button.danger { background: var(--danger); }
+button:disabled { opacity: 0.5; }
+.pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+.li { padding: 7px 0; border-bottom: 1px solid rgba(128,128,128,0.15); font-size: 14.5px; }
+.li:last-child { border-bottom: none; }
+.li b { font-weight: 600; }
+.crisis { border: 1.5px solid var(--danger); }
+.crisis h2 { color: var(--danger); }
+.crisis a { color: var(--danger); font-weight: 700; text-decoration: none; font-size: 18px; }
+.screen { display: none; }
+.screen.active { display: block; }
+.q-progress { color: var(--hint); font-size: 13px; margin-bottom: 6px; }
+.q-text { font-size: 18px; font-weight: 600; margin: 6px 0 16px; }
+.opt {
+  display: block; width: 100%; text-align: left; margin-bottom: 8px;
+  background: var(--card); color: var(--text); border: 1.5px solid rgba(128,128,128,0.25);
+}
+.opt.sel { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
+.mood-row { display: flex; gap: 6px; justify-content: space-between; margin: 8px 0; }
+.mood {
+  flex: 1; font-size: 26px; padding: 10px 0; border-radius: 14px;
+  background: var(--card); border: 1.5px solid rgba(128,128,128,0.2); min-width: 0;
+}
+.mood.sel { border-color: var(--accent); transform: scale(1.08); background: var(--accent); }
+textarea {
+  width: 100%; font: inherit; border-radius: 12px; padding: 10px 12px;
+  border: 1.5px solid rgba(128,128,128,0.25); background: var(--card); color: var(--text);
+  resize: none; margin-top: 8px;
+}
+.spark { width: 100%; height: 38px; }
+.footer { color: var(--hint); font-size: 12px; text-align: center; margin-top: 18px; }
+.overlay {
+  position: fixed; inset: 0; background: var(--bg); z-index: 50; padding: 20px 16px;
+  display: none; overflow-y: auto;
+}
+.overlay.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ ГЛАВНЫЙ ЭКРАН ══════════ -->
+<div id="scr-home" class="screen active">
+  <h1 id="hello">Здравствуйте!</h1>
+  <p class="sub" id="updated">Личный кабинет</p>
+
+  <div class="card" id="visit-card" style="display:none;">
+    <h2>🗓 Ближайший визит</h2>
+    <div id="visit-when" style="font-size:18px; font-weight:700;"></div>
+    <div class="muted" id="visit-note"></div>
+    <div class="row">
+      <button id="visit-yes">✅ Приду</button>
+      <button id="visit-no" class="ghost">🔁 Перенести</button>
+    </div>
+  </div>
+
+  <div class="card" id="dx-card" style="display:none;">
+    <h2>🩺 Диагноз</h2>
+    <div id="dx-text"></div>
+  </div>
+
+  <div class="card" id="plan-card" style="display:none;">
+    <h2>🎯 План лечения</h2>
+    <div id="plan-body"></div>
+  </div>
+
+  <div class="card" id="rx-card" style="display:none;">
+    <h2>💊 Назначения</h2>
+    <div id="rx-body"></div>
+  </div>
+
+  <div class="card" id="rec-card" style="display:none;">
+    <h2>📋 Рекомендации</h2>
+    <div id="rec-body" style="white-space:pre-wrap; font-size:14.5px;"></div>
+  </div>
+
+  <div class="card" id="progress-card" style="display:none;">
+    <h2>📈 Динамика</h2>
+    <div id="progress-body"></div>
+    <div class="muted">Интерпретацию баллов даёт врач — цифры без контекста могут пугать зря.</div>
+  </div>
+
+  <div class="card">
+    <h2>📊 Опросники</h2>
+    <div class="muted">Заполняются 2–3 минуты, результат сразу уходит врачу.</div>
+    <div class="row">
+      <button data-scale="PHQ-9" class="ghost scale-btn">Настроение · PHQ-9</button>
+      <button data-scale="GAD-7" class="ghost scale-btn">Тревога · GAD-7</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🙂 Как вы сегодня?</h2>
+    <div class="mood-row" id="mood-row">
+      <button class="mood" data-m="1">😞</button>
+      <button class="mood" data-m="2">🙁</button>
+      <button class="mood" data-m="3">😐</button>
+      <button class="mood" data-m="4">🙂</button>
+      <button class="mood" data-m="5">😄</button>
+    </div>
+    <textarea id="mood-note" rows="2" maxlength="400" placeholder="Пара слов о самочувствии (необязательно)"></textarea>
+    <div class="row"><button id="mood-send" disabled>Отправить врачу</button></div>
+  </div>
+
+  <div class="card crisis">
+    <h2>🆘 Помощь сейчас</h2>
+    <div id="crisis-body" style="font-size:14.5px;"></div>
+    <div style="margin-top:8px; font-size:14.5px;">
+      Скорая помощь: <a href="tel:103">103</a> · Единый номер: <a href="tel:112">112</a>
+    </div>
+    <div class="muted" style="margin-top:6px;">
+      Этот кабинет и чат врач читает в рабочее время — они не заменяют экстренную помощь.
+    </div>
+  </div>
+
+  <div class="footer" id="footer"></div>
+</div>
+
+<!-- ══════════ ЭКРАН ОПРОСНИКА ══════════ -->
+<div id="scr-scale" class="screen">
+  <button class="ghost" id="scale-back" style="flex:none; min-width:0; padding:7px 14px; margin-bottom:10px;">← Назад</button>
+  <div class="card">
+    <h2 id="scale-title"></h2>
+    <div class="muted" id="scale-instr"></div>
+  </div>
+  <div class="card">
+    <div class="q-progress" id="q-progress"></div>
+    <div class="q-text" id="q-text"></div>
+    <div id="q-opts"></div>
+  </div>
+</div>
+
+<!-- ══════════ КРИЗИСНЫЙ ЭКРАН (PHQ-9 п.9) ══════════ -->
+<div id="crisis-overlay" class="overlay">
+  <div class="card crisis">
+    <h2>🆘 Вы не одни</h2>
+    <p style="font-size:16px;">Вы отметили мысли о смерти или причинении себе вреда.
+    Это важный ответ — врач его обязательно увидит.</p>
+    <p style="font-weight:700;">Если вам опасно прямо сейчас — не ждите ответа в приложении:</p>
+    <div style="font-size:18px; margin:8px 0;">
+      📞 Скорая помощь: <a href="tel:103">103</a><br>
+      📞 Единый номер: <a href="tel:112">112</a>
+    </div>
+    <div id="crisis-clinic" style="font-size:15px;"></div>
+    <p class="muted">Приложение не читают круглосуточно. Звонок — быстрее.</p>
+    <div class="row"><button id="crisis-continue">Понятно, продолжить опрос</button></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+/* ── Шкалы (тексты идентичны докторской системе, src/data/scales) ── */
+const SCALES = {
+  'PHQ-9': {
+    id: 'PHQ-9', title: 'Настроение · PHQ-9',
+    instruction: 'За последние 2 недели как часто вас беспокоили следующие проблемы?',
+    crisisQuestion: 'q9',
+    questions: [
+      { id: 'q1', text: 'Слабый интерес или удовольствие от обычных дел' },
+      { id: 'q2', text: 'Подавленное настроение, чувство безысходности' },
+      { id: 'q3', text: 'Проблемы со сном (трудности засыпания, прерывистый или избыточный сон)' },
+      { id: 'q4', text: 'Чувство усталости или упадок сил' },
+      { id: 'q5', text: 'Плохой аппетит или переедание' },
+      { id: 'q6', text: 'Плохое мнение о себе, чувство неудачи или вины' },
+      { id: 'q7', text: 'Трудности с концентрацией (чтение, ТВ)' },
+      { id: 'q8', text: 'Замедленность или, наоборот, повышенная подвижность, заметная окружающим' },
+      { id: 'q9', text: 'Мысли о том, что лучше было бы умереть, или о причинении себе вреда' }
+    ],
+    options: [
+      { value: 0, label: 'Никогда' },
+      { value: 1, label: 'Несколько дней' },
+      { value: 2, label: 'Более половины дней' },
+      { value: 3, label: 'Почти каждый день' }
+    ]
+  },
+  'GAD-7': {
+    id: 'GAD-7', title: 'Тревога · GAD-7',
+    instruction: 'За последние 2 недели как часто вас беспокоили следующие проблемы?',
+    questions: [
+      { id: 'q1', text: 'Чувство нервозности, тревоги или взвинченности' },
+      { id: 'q2', text: 'Невозможность остановить или контролировать беспокойство' },
+      { id: 'q3', text: 'Чрезмерное беспокойство по разным поводам' },
+      { id: 'q4', text: 'Трудности с расслаблением' },
+      { id: 'q5', text: 'Беспокойность настолько, что трудно усидеть на месте' },
+      { id: 'q6', text: 'Лёгкая раздражительность или вспыльчивость' },
+      { id: 'q7', text: 'Чувство страха, что произойдёт что-то ужасное' }
+    ],
+    options: [
+      { value: 0, label: 'Никогда' },
+      { value: 1, label: 'Несколько дней' },
+      { value: 2, label: 'Более половины дней' },
+      { value: 3, label: 'Почти каждый день' }
+    ]
+  }
+};
+
+/* ── Данные кабинета: URL-фрагмент → localStorage → рендер ── */
+const b64uToBytes = (s) => {
+  const b = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+  const arr = new Uint8Array(b.length);
+  for (let i = 0; i < b.length; i++) arr[i] = b.charCodeAt(i);
+  return arr;
+};
+
+async function decodePayload(hash) {
+  const m = /#d=([gp]):(.+)$/.exec(hash || '');
+  if (!m) return null;
+  const bytes = b64uToBytes(m[2]);
+  if (m[1] === 'p') return JSON.parse(new TextDecoder().decode(bytes));
+  const ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return JSON.parse(await new Response(ds).text());
+}
+
+async function loadView() {
+  try {
+    const fresh = await decodePayload(location.hash);
+    if (fresh) {
+      try { localStorage.setItem('mm_patient_view', JSON.stringify(fresh)); } catch {}
+      history.replaceState(null, '', location.pathname + location.search); // не держим данные в URL
+      return fresh;
+    }
+  } catch (e) { /* битый фрагмент — падаем на кэш */ }
+  try { return JSON.parse(localStorage.getItem('mm_patient_view') || 'null'); } catch { return null; }
+}
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmtDate = (d, t) => {
+  try {
+    const dt = new Date(d + 'T00:00:00');
+    const s = dt.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
+    return s + (t ? ' · ' + t : '');
+  } catch { return d + (t ? ' · ' + t : ''); }
+};
+
+/* Единственная отправка за открытие: sendData закрывает мини-приложение. */
+let sent = false;
+function send(obj) {
+  if (sent) return;
+  sent = true;
+  if (tg && tg.sendData) tg.sendData(JSON.stringify(obj));
+  else alert('Откройте кабинет через кнопку в чате бота, чтобы отправка работала.');
+}
+function confirmSend(text, obj) {
+  const go = () => send(obj);
+  if (tg && tg.showConfirm) tg.showConfirm(text + ' Окно закроется после отправки.', (ok) => { if (ok) go(); });
+  else if (confirm(text)) go();
+}
+
+function render(view) {
+  if (view && view.patient && view.patient.displayName) $('hello').textContent = 'Здравствуйте, ' + view.patient.displayName + '!';
+  if (view && view.generatedAt) {
+    const d = new Date(view.generatedAt);
+    $('updated').textContent = 'Кабинет обновлён: ' + d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  } else {
+    $('updated').textContent = 'Данные кабинета ещё не получены — попросите врача отправить обновление. Опросники и чек-ин работают.';
+  }
+  if (!view) { $('footer').textContent = 'МирМед · кабинет пациента'; return; }
+
+  if (view.nextVisit && view.nextVisit.date) {
+    $('visit-card').style.display = '';
+    $('visit-when').textContent = fmtDate(view.nextVisit.date, view.nextVisit.time);
+    $('visit-note').textContent = view.nextVisit.note || '';
+  }
+  if (view.diagnosis) { $('dx-card').style.display = ''; $('dx-text').textContent = view.diagnosis; }
+
+  if (view.plan && (view.plan.title || (view.plan.goals || []).length)) {
+    $('plan-card').style.display = '';
+    $('plan-body').innerHTML =
+      (view.plan.title ? '<div style="font-weight:600; margin-bottom:6px;">' + esc(view.plan.title) + '</div>' : '') +
+      (view.plan.goals || []).map((g) => '<div class="li">🎯 ' + esc(g.description) + (g.target ? ' <span class="muted">→ ' + esc(g.target) + '</span>' : '') + '</div>').join('');
+  }
+
+  const rxRows = []
+    .concat((view.prescriptions || []).map((r) => '<div class="li">💊 <b>' + esc(r.name) + '</b>' + (r.dosage ? ' · ' + esc(r.dosage) : '') + (r.frequency ? ' · ' + esc(r.frequency) : '') + (r.duration ? ' · ' + esc(r.duration) : '') + '</div>'))
+    .concat((view.interventions || []).map((iv) => '<div class="li">🧩 <b>' + esc(iv.name) + '</b>' + (iv.intensity ? ' · ' + esc(iv.intensity) : '') + (iv.who ? ' · ' + esc(iv.who) : '') + '</div>'));
+  if (rxRows.length) { $('rx-card').style.display = ''; $('rx-body').innerHTML = rxRows.join(''); }
+
+  if (view.recommendations) { $('rec-card').style.display = ''; $('rec-body').textContent = view.recommendations; }
+
+  const series = view.progress || [];
+  if (series.length) {
+    $('progress-card').style.display = '';
+    $('progress-body').innerHTML = series.map((s) => {
+      const pts = (s.points || []).filter((p) => Number.isFinite(p.score));
+      if (!pts.length) return '';
+      const min = Math.min(...pts.map((p) => p.score)), max = Math.max(...pts.map((p) => p.score));
+      const span = (max - min) || 1;
+      const step = pts.length > 1 ? 100 / (pts.length - 1) : 0;
+      const poly = pts.map((p, i) => (i * step).toFixed(1) + ',' + (30 - ((p.score - min) / span) * 24 + 4).toFixed(1)).join(' ');
+      const last = pts[pts.length - 1];
+      return '<div class="li"><b>' + esc(s.scaleName) + '</b> · последний балл: <b>' + esc(last.score) + '</b>' + (s.label ? ' <span class="muted">' + esc(s.label) + '</span>' : '') +
+        '<svg class="spark" viewBox="0 0 100 38" preserveAspectRatio="none"><polyline points="' + poly + '" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+    }).join('');
+  }
+
+  const safety = view.safety || {};
+  $('crisis-body').innerHTML =
+    (safety.crisisText ? '<div>' + esc(safety.crisisText) + '</div>' : '') +
+    (safety.clinicPhones ? '<div style="margin-top:4px;">Клиника: <b>' + esc(safety.clinicPhones) + '</b></div>' : '');
+  $('crisis-clinic').innerHTML = safety.clinicPhones ? '📞 Клиника: <b>' + esc(safety.clinicPhones) + '</b>' : '';
+
+  $('footer').textContent = 'МирМед · кабинет пациента · данные хранятся на этом телефоне';
+}
+
+/* ── Визит: приду / перенести ── */
+$('visit-yes').addEventListener('click', () => confirmSend('Подтвердить, что придёте?', { t: 'visit', a: 'yes' }));
+$('visit-no').addEventListener('click', () => confirmSend('Попросить врача перенести визит? Бот пришлёт свободное время в чат.', { t: 'visit', a: 'no' }));
+
+/* ── Чек-ин настроения ── */
+let mood = 0;
+$('mood-row').addEventListener('click', (e) => {
+  const b = e.target.closest('.mood');
+  if (!b) return;
+  mood = Number(b.dataset.m);
+  document.querySelectorAll('.mood').forEach((x) => x.classList.toggle('sel', x === b));
+  $('mood-send').disabled = false;
+});
+$('mood-send').addEventListener('click', () => {
+  if (!mood) return;
+  confirmSend('Отправить самочувствие врачу?', { t: 'checkin', mood, note: $('mood-note').value.trim().slice(0, 400) });
+});
+
+/* ── Опросники ── */
+let run = null; // { def, idx, answers }
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
+  window.scrollTo(0, 0);
+}
+function startScale(id) {
+  const def = SCALES[id];
+  if (!def) return;
+  run = { def, idx: 0, answers: {} };
+  $('scale-title').textContent = def.title;
+  $('scale-instr').textContent = def.instruction;
+  showScreen('scr-scale');
+  renderQuestion();
+}
+function renderQuestion() {
+  const { def, idx } = run;
+  const q = def.questions[idx];
+  $('q-progress').textContent = 'Вопрос ' + (idx + 1) + ' из ' + def.questions.length;
+  $('q-text').textContent = q.text;
+  $('q-opts').innerHTML = def.options.map((o) =>
+    '<button class="opt" data-v="' + o.value + '">' + esc(o.label) + '</button>').join('');
+  $('q-opts').querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => answer(Number(b.dataset.v), b)));
+}
+function answer(value, btn) {
+  if (run.lock) return; // быстрый двойной тап не должен перескочить вопрос
+  run.lock = true;
+  btn.classList.add('sel');
+  const { def, idx } = run;
+  const q = def.questions[idx];
+  run.answers[q.id] = value;
+  // 🆘 Кризисный экран сразу в момент ответа (PHQ-9 п.9 > 0) — требование
+  // безопасности: телефоны помощи показываются немедленно, не «в конце».
+  const next = () => {
+    run.lock = false;
+    if (run.idx + 1 < def.questions.length) { run.idx++; renderQuestion(); }
+    else finishScale();
+  };
+  if (def.crisisQuestion === q.id && value > 0) {
+    $('crisis-overlay').classList.add('active');
+    $('crisis-continue').onclick = () => { $('crisis-overlay').classList.remove('active'); next(); };
+  } else {
+    setTimeout(next, 180);
+  }
+}
+function finishScale() {
+  const { def, answers } = run;
+  confirmSend('Отправить ответы врачу?', { t: 'scale', id: def.id, answers });
+  // если пациент отменил отправку — оставляем экран, можно отправить ещё раз
+  sent = false;
+}
+document.querySelectorAll('.scale-btn').forEach((b) => b.addEventListener('click', () => startScale(b.dataset.scale)));
+$('scale-back').addEventListener('click', () => { run = null; showScreen('scr-home'); });
+
+loadView().then(render);
+</script>
+</body>
+</html>
