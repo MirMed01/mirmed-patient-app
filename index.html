@@ -152,6 +152,12 @@ textarea {
     <div class="row"><button id="mood-send" disabled>Отправить врачу</button></div>
   </div>
 
+  <div class="card" id="log-card" style="display:none;">
+    <h2>🗒 Журнал</h2>
+    <div id="log-body"></div>
+    <div class="muted" style="margin-top:6px;">Последние сообщения — полная переписка в чате бота.</div>
+  </div>
+
   <div class="card">
     <h2>👨‍⚕️ Связь с врачом</h2>
     <div class="row"><button id="btn-book" class="ghost">🗓 Записаться на приём</button></div>
@@ -379,6 +385,15 @@ function render(view) {
       const last = pts[pts.length - 1];
       return '<div class="li"><b>' + esc(s.scaleName) + '</b> · последний балл: <b>' + esc(last.score) + '</b>' + (s.label ? ' <span class="muted">' + esc(s.label) + '</span>' : '') +
         '<svg class="spark" viewBox="0 0 100 38" preserveAspectRatio="none"><polyline points="' + poly + '" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+    }).join('');
+  }
+
+  const msgs = view.recentMessages || [];
+  if (msgs.length) {
+    $('log-card').style.display = '';
+    $('log-body').innerHTML = msgs.map((m) => {
+      const d = String(m.at || '').split('-').slice(1).reverse().join('.');
+      return '<div class="li" style="font-size:13.5px;"><span style="color:var(--hint);">' + esc(d) + ' · ' + (m.dir === 'in' ? 'Вы' : 'Клиника') + ':</span> ' + esc(m.text) + '</div>';
     }).join('');
   }
 
