@@ -106,6 +106,9 @@ textarea {
     <div id="visit-when" style="font-size:18px; font-weight:700;"></div>
     <div id="visit-days" style="font-weight:600; color:var(--accent);"></div>
     <div class="muted" id="visit-note"></div>
+    <!-- Подтверждённый визит: кнопку «Приду» заменяет статус — действие
+         завершено, повторно подтверждать нечего; «Перенести» остаётся -->
+    <div id="visit-confirmed" style="display:none; margin-top:8px; font-weight:600; color:var(--ok);">✅ Вы подтвердили — ждём вас!</div>
     <div class="row">
       <button id="visit-yes">✅ Приду</button>
       <button id="visit-no" class="ghost">🔁 Перенести</button>
@@ -2921,6 +2924,10 @@ function render(view) {
       $('visit-days').textContent = days === 0 ? 'Сегодня!' : days === 1 ? 'Завтра'
         : days > 1 ? `Через ${days} дн.` : '';
     } catch {}
+    if (view.nextVisit.confirmed) {
+      $('visit-confirmed').style.display = '';
+      $('visit-yes').style.display = 'none';
+    }
   }
   if (view.diagnosis) { $('dx-card').style.display = ''; $('dx-text').textContent = view.diagnosis; }
 
