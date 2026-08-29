@@ -266,16 +266,25 @@ async function decodePayload(hash) {
   return JSON.parse(await new Response(ds).text());
 }
 
+let decodeFailed = false;
 async function loadView() {
   try {
     const fresh = await decodePayload(location.hash);
     if (fresh) {
-      try { localStorage.setItem('mm_patient_view', JSON.stringify(fresh)); } catch {}
-      history.replaceState(null, '', location.pathname + location.search); // не держим данные в URL
+      // Кэш в двух местах + данные ОСТАЮТСЯ в URL: WebView Telegram может
+      // перезагрузить страницу в любой момент, а хранилище бывает отключено —
+      // раньше это давало «данные не получены» после успешного открытия.
+      const json = JSON.stringify(fresh);
+      try { localStorage.setItem('mm_patient_view', json); } catch {}
+      try { sessionStorage.setItem('mm_patient_view', json); } catch {}
       return fresh;
     }
-  } catch (e) { /* битый фрагмент — падаем на кэш */ }
-  try { return JSON.parse(localStorage.getItem('mm_patient_view') || 'null'); } catch { return null; }
+  } catch (e) { decodeFailed = true; }
+  try {
+    const v = JSON.parse(localStorage.getItem('mm_patient_view') || 'null');
+    if (v) return v;
+  } catch {}
+  try { return JSON.parse(sessionStorage.getItem('mm_patient_view') || 'null'); } catch { return null; }
 }
 
 const $ = (id) => document.getElementById(id);
@@ -308,7 +317,9 @@ function render(view) {
     const d = new Date(view.generatedAt);
     $('updated').textContent = 'Кабинет обновлён: ' + d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   } else {
-    $('updated').textContent = 'Данные кабинета ещё не получены — попросите врача отправить обновление. Опросники и чек-ин работают.';
+    $('updated').textContent = decodeFailed
+      ? 'Не удалось прочитать данные — откройте кабинет по самой свежей кнопке от бота.'
+      : 'Данные кабинета появятся после обновления от врача — откройте кабинет по свежей кнопке из чата. Опросники и чек-ин уже работают.';
   }
   if (!view) { $('footer').textContent = 'МирМед · кабинет пациента'; return; }
 
