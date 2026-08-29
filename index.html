@@ -258,7 +258,13 @@ const b64uToBytes = (s) => {
 };
 
 async function decodePayload(hash) {
-  const m = /#d=([gp]):(.+)$/.exec(hash || '');
+  // ⚠️ Telegram дописывает в фрагмент СВОИ параметры (…&tgWebAppData=…&tgWebAppVersion=…),
+  // поэтому фрагмент нельзя разбирать как «всё после #d=» — режем по & и
+  // берём только нашу часть. Иначе base64 «толстеет» телеграмовским хвостом
+  // и декодирование падает (в обычном браузере хвоста нет — там работало).
+  const frag = String(hash || '').replace(/^#/, '');
+  const part = frag.split('&').find((p) => p.startsWith('d='));
+  const m = /^d=([gp]):([A-Za-z0-9_-]+)$/.exec(part || '');
   if (!m) return null;
   const bytes = b64uToBytes(m[2]);
   if (m[1] === 'p') return JSON.parse(new TextDecoder().decode(bytes));
