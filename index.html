@@ -284,24 +284,32 @@ async function decodePayload(hash) {
 }
 
 let decodeFailed = false;
-async function loadView() {
-  try {
-    const fresh = await decodePayload(location.hash);
-    if (fresh) {
-      // Кэш в двух местах + данные ОСТАЮТСЯ в URL: WebView Telegram может
-      // перезагрузить страницу в любой момент, а хранилище бывает отключено —
-      // раньше это давало «данные не получены» после успешного открытия.
-      const json = JSON.stringify(fresh);
-      try { localStorage.setItem('mm_patient_view', json); } catch {}
-      try { sessionStorage.setItem('mm_patient_view', json); } catch {}
-      return fresh;
-    }
-  } catch (e) { decodeFailed = true; }
+let staleLinkOpened = false;
+function readCache() {
   try {
     const v = JSON.parse(localStorage.getItem('mm_patient_view') || 'null');
     if (v) return v;
   } catch {}
   try { return JSON.parse(sessionStorage.getItem('mm_patient_view') || 'null'); } catch { return null; }
+}
+async function loadView() {
+  let fresh = null;
+  try { fresh = await decodePayload(location.hash); } catch (e) { decodeFailed = true; }
+  const cached = readCache();
+  // Кабинет НИКОГДА не откатывается: пациент может открыть старую кнопку
+  // из истории чата — показываем самые свежие из известных данных,
+  // а не перезаписываем кэш старым снимком.
+  if (fresh && cached && String(cached.generatedAt || '') > String(fresh.generatedAt || '')) {
+    staleLinkOpened = true;
+    return cached;
+  }
+  if (fresh) {
+    const json = JSON.stringify(fresh);
+    try { localStorage.setItem('mm_patient_view', json); } catch {}
+    try { sessionStorage.setItem('mm_patient_view', json); } catch {}
+    return fresh;
+  }
+  return cached;
 }
 
 const $ = (id) => document.getElementById(id);
@@ -332,7 +340,8 @@ function render(view) {
   if (view && view.patient && view.patient.displayName) $('hello').textContent = 'Здравствуйте, ' + view.patient.displayName + '!';
   if (view && view.generatedAt) {
     const d = new Date(view.generatedAt);
-    $('updated').textContent = 'Кабинет обновлён: ' + d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    $('updated').textContent = 'Кабинет обновлён: ' + d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+      + (staleLinkOpened ? ' · открыта старая ссылка — показаны последние данные' : '');
   } else {
     $('updated').textContent = decodeFailed
       ? 'Не удалось прочитать данные — откройте кабинет по самой свежей кнопке от бота.'
