@@ -356,15 +356,26 @@ $('visit-no').addEventListener('click', () => confirmSend('Попросить в
 
 /* ── Чек-ин настроения ── */
 let mood = 0;
+const moodSendState = () => {
+  // Кнопка живая, как только есть смайлик ИЛИ текст — а не молча серая
+  $('mood-send').disabled = !(mood || $('mood-note').value.trim());
+};
 $('mood-row').addEventListener('click', (e) => {
   const b = e.target.closest('.mood');
   if (!b) return;
   mood = Number(b.dataset.m);
   document.querySelectorAll('.mood').forEach((x) => x.classList.toggle('sel', x === b));
-  $('mood-send').disabled = false;
+  moodSendState();
 });
+$('mood-note').addEventListener('input', moodSendState);
 $('mood-send').addEventListener('click', () => {
-  if (!mood) return;
+  if (!mood) {
+    // Настроение — главный сигнал для мониторинга: просим выбрать, а не шлём пустоту
+    const msg = 'Выберите смайлик настроения — это главное, что нужно врачу.';
+    if (tg && tg.showAlert) tg.showAlert(msg); else alert(msg);
+    $('mood-row').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
   confirmSend('Отправить самочувствие врачу?', { t: 'checkin', mood, note: $('mood-note').value.trim().slice(0, 400) });
 });
 
