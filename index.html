@@ -88,6 +88,11 @@ textarea {
   <h1 id="hello">Здравствуйте!</h1>
   <p class="sub" id="updated">Личный кабинет</p>
 
+  <div class="card" id="note-card" style="display:none; border-left:4px solid var(--accent);">
+    <h2>💬 От вашего врача</h2>
+    <div id="note-text" style="white-space:pre-wrap; font-size:15px; line-height:1.55;"></div>
+  </div>
+
   <div class="card" id="visit-card" style="display:none;">
     <h2>🗓 Ближайший визит</h2>
     <div id="visit-when" style="font-size:18px; font-weight:700;"></div>
@@ -329,6 +334,10 @@ function render(view) {
   }
   if (!view) { $('footer').textContent = 'МирМед · кабинет пациента'; return; }
 
+  if (view.doctorNote) {
+    $('note-card').style.display = '';
+    $('note-text').textContent = view.doctorNote;
+  }
   if (view.nextVisit && view.nextVisit.date) {
     $('visit-card').style.display = '';
     $('visit-when').textContent = fmtDate(view.nextVisit.date, view.nextVisit.time);
