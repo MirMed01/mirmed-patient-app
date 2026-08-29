@@ -91,6 +91,7 @@ textarea {
   <div class="card" id="visit-card" style="display:none;">
     <h2>🗓 Ближайший визит</h2>
     <div id="visit-when" style="font-size:18px; font-weight:700;"></div>
+    <div id="visit-days" style="font-weight:600; color:var(--accent);"></div>
     <div class="muted" id="visit-note"></div>
     <div class="row">
       <button id="visit-yes">✅ Приду</button>
@@ -144,6 +145,13 @@ textarea {
     </div>
     <textarea id="mood-note" rows="2" maxlength="400" placeholder="Пара слов о самочувствии (необязательно)"></textarea>
     <div class="row"><button id="mood-send" disabled>Отправить врачу</button></div>
+  </div>
+
+  <div class="card">
+    <h2>👨‍⚕️ Связь с врачом</h2>
+    <div class="row"><button id="btn-book" class="ghost">🗓 Записаться на приём</button></div>
+    <textarea id="msg-text" rows="2" maxlength="900" placeholder="Сообщение врачу (не экстренно) — ответ придёт в чат"></textarea>
+    <div class="row"><button id="msg-send" disabled>✉️ Отправить сообщение</button></div>
   </div>
 
   <div class="card crisis">
@@ -308,6 +316,13 @@ function render(view) {
     $('visit-card').style.display = '';
     $('visit-when').textContent = fmtDate(view.nextVisit.date, view.nextVisit.time);
     $('visit-note').textContent = view.nextVisit.note || '';
+    try {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const vd = new Date(view.nextVisit.date + 'T00:00:00');
+      const days = Math.round((vd - today) / 86400000);
+      $('visit-days').textContent = days === 0 ? 'Сегодня!' : days === 1 ? 'Завтра'
+        : days > 1 ? `Через ${days} дн.` : '';
+    } catch {}
   }
   if (view.diagnosis) { $('dx-card').style.display = ''; $('dx-text').textContent = view.diagnosis; }
 
@@ -377,6 +392,16 @@ $('mood-send').addEventListener('click', () => {
     return;
   }
   confirmSend('Отправить самочувствие врачу?', { t: 'checkin', mood, note: $('mood-note').value.trim().slice(0, 400) });
+});
+
+/* ── Связь с врачом: запись + сообщение ── */
+$('btn-book').addEventListener('click', () =>
+  confirmSend('Запросить запись на приём? Бот пришлёт свободное время в чат.', { t: 'book' }));
+$('msg-text').addEventListener('input', () => { $('msg-send').disabled = !$('msg-text').value.trim(); });
+$('msg-send').addEventListener('click', () => {
+  const text = $('msg-text').value.trim().slice(0, 900);
+  if (!text) return;
+  confirmSend('Отправить сообщение врачу?', { t: 'msg', text });
 });
 
 /* ── Опросники ── */
