@@ -187,6 +187,17 @@ textarea {
   </div>
 
   <div class="card">
+    <h2>📎 Анализы и документы</h2>
+    <div style="font-size:14.5px; line-height:1.45;">
+      Результаты анализов, выписки или фото документов отправляйте <b>прямо в чат бота</b>:
+      нажмите скрепку 📎 рядом с полем ввода и выберите фото или PDF. Файл сразу попадёт
+      в вашу карту к врачу.
+    </div>
+    <div class="row"><button id="btn-doc" class="ghost">📎 Отправить анализ врачу</button></div>
+    <div class="muted" style="margin-top:6px;">Документы, которые врач отправляет вам, тоже приходят в этот чат.</div>
+  </div>
+
+  <div class="card">
     <h2>👨‍⚕️ Связь с врачом</h2>
     <div class="row"><button id="btn-book" class="ghost">🗓 Записаться на приём</button></div>
     <textarea id="msg-text" rows="2" maxlength="900" placeholder="Сообщение врачу (не экстренно) — ответ придёт в чат"></textarea>
@@ -3475,6 +3486,11 @@ $('diary-send').addEventListener('click', () => {
 /* ── Связь с врачом: запись + сообщение ── */
 $('btn-book').addEventListener('click', () =>
   confirmSend('Запросить запись на приём? Бот пришлёт свободное время в чат.', { t: 'book' }));
+// 📎 Файлы через мини-приложение отправить нельзя (Telegram не даёт кабинету
+// доступа к вложениям) — кнопка закрывает кабинет, и бот подсказывает в чате,
+// как прислать фото/PDF скрепкой.
+$('btn-doc').addEventListener('click', () =>
+  confirmSend('Отправить анализ? Кабинет закроется, а бот подскажет в чате, как прикрепить файл.', { t: 'doc' }));
 $('msg-text').addEventListener('input', () => { $('msg-send').disabled = !$('msg-text').value.trim(); });
 $('msg-send').addEventListener('click', () => {
   const text = $('msg-text').value.trim().slice(0, 900);
