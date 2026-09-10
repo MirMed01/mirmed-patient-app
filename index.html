@@ -3408,7 +3408,8 @@ function render(view) {
       const icon = st.kind === 'scale' ? '📊' : st.kind === 'visit' ? '🗓' : st.kind === 'lab' ? '🧪' : '📌';
       const btn = st.kind === 'scale' && st.scaleId && SCALES[st.scaleId]
         ? '<div style="margin-top:6px;"><button data-scale="' + esc(st.scaleId) + '" class="scale-btn">Заполнить сейчас</button></div>'
-        : st.kind === 'visit' ? '<div class="muted" style="margin-top:4px;">Напишите врачу в чат или позвоните — подберём время.</div>' : '';
+        : st.kind === 'visit' ? '<div style="margin-top:6px;"><button data-book="1" class="scale-btn">Записаться</button><div class="muted" style="margin-top:4px;">Бот пришлёт свободное время в чат — выберите кнопкой.</div></div>'
+        : st.kind === 'lab' ? '<div class="muted" style="margin-top:4px;">Результат пришлите фото в чат боту — он попадёт врачу в карту.</div>' : '';
       return '<div class="li">' + icon + ' <b>' + esc(st.title) + '</b><div class="muted">' + esc(when) + '</div>' + btn + '</div>';
     }).join('');
   }
@@ -3582,8 +3583,10 @@ function finishScale() {
 // Кнопки шкал создаются динамически (render) — слушаем контейнер
 /* Кнопка опросника есть и в «Что дальше» — один обработчик на оба блока. */
 ['scales-row', 'steps-body'].forEach((id) => $(id).addEventListener('click', (e) => {
+  const bk = e.target.closest('[data-book]');
+  if (bk) { confirmSend('Попросить врача записать вас на приём? Бот пришлёт свободное время в чат.', { t: 'visit', a: 'book' }); return; }
   const b = e.target.closest('.scale-btn');
-  if (b) startScale(b.dataset.scale);
+  if (b && b.dataset.scale) startScale(b.dataset.scale);
 }));
 $('scale-back').addEventListener('click', () => { run = null; showScreen('scr-home'); });
 
