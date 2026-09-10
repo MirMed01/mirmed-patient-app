@@ -120,6 +120,13 @@ textarea {
     <div id="dx-text"></div>
   </div>
 
+  <!-- 📌 «Что дальше»: шаги из решения врача по вашей динамике — дата и
+       действие; опросник открывается в один клик (view.nextSteps). -->
+  <div class="card" id="steps-card" style="display:none;">
+    <h2>📌 Что дальше</h2>
+    <div id="steps-body"></div>
+  </div>
+
   <div class="card" id="plan-card" style="display:none;">
     <h2>🎯 План лечения</h2>
     <div id="plan-body"></div>
@@ -3385,6 +3392,27 @@ function render(view) {
   }
   if (view.diagnosis) { $('dx-card').style.display = ''; $('dx-text').textContent = view.diagnosis; }
 
+  /* 📌 Что дальше — шаги из решения врача. Опросник открывается той же
+     кнопкой, что и в разделе опросников (.scale-btn), если он есть в приложении. */
+  const steps = (view.nextSteps || []).filter((st) => st && st.date);
+  if (steps.length) {
+    $('steps-card').style.display = '';
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    $('steps-body').innerHTML = steps.map((st) => {
+      let when = '';
+      try {
+        const d = new Date(st.date + 'T00:00:00');
+        const days = Math.round((d - today) / 86400000);
+        when = days === 0 ? 'Сегодня' : days === 1 ? 'Завтра' : days > 1 ? 'Через ' + days + ' дн. · ' + d.toLocaleDateString('ru-RU') : 'Ждали к ' + d.toLocaleDateString('ru-RU');
+      } catch {}
+      const icon = st.kind === 'scale' ? '📊' : st.kind === 'visit' ? '🗓' : st.kind === 'lab' ? '🧪' : '📌';
+      const btn = st.kind === 'scale' && st.scaleId && SCALES[st.scaleId]
+        ? '<div style="margin-top:6px;"><button data-scale="' + esc(st.scaleId) + '" class="scale-btn">Заполнить сейчас</button></div>'
+        : st.kind === 'visit' ? '<div class="muted" style="margin-top:4px;">Напишите врачу в чат или позвоните — подберём время.</div>' : '';
+      return '<div class="li">' + icon + ' <b>' + esc(st.title) + '</b><div class="muted">' + esc(when) + '</div>' + btn + '</div>';
+    }).join('');
+  }
+
   if (view.plan && (view.plan.title || (view.plan.goals || []).length)) {
     $('plan-card').style.display = '';
     $('plan-body').innerHTML =
@@ -3552,10 +3580,11 @@ function finishScale() {
   sent = false;
 }
 // Кнопки шкал создаются динамически (render) — слушаем контейнер
-$('scales-row').addEventListener('click', (e) => {
+/* Кнопка опросника есть и в «Что дальше» — один обработчик на оба блока. */
+['scales-row', 'steps-body'].forEach((id) => $(id).addEventListener('click', (e) => {
   const b = e.target.closest('.scale-btn');
   if (b) startScale(b.dataset.scale);
-});
+}));
 $('scale-back').addEventListener('click', () => { run = null; showScreen('scr-home'); });
 
 loadView().then(render);
