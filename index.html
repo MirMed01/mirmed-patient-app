@@ -86,96 +86,143 @@ textarea {
   display: none; overflow-y: auto;
 }
 .overlay.active { display: block; }
+/* ── Верхняя панель: SOS всегда на виду + язык ── */
+.topbar { display: flex; justify-content: flex-end; gap: 8px; margin: -2px 0 4px; }
+.topbar button { flex: none; min-width: 0; padding: 6px 12px; font-size: 13px; border-radius: 999px; }
+.topbar .sos { background: var(--danger); color: #fff; font-weight: 800; letter-spacing: 0.04em; }
+.topbar .lang { background: transparent; color: var(--hint); border: 1.5px solid rgba(128,128,128,0.3); font-weight: 600; }
+/* ── Чек-лист «Сегодня» ── */
+.chk { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(128,128,128,0.15); cursor: pointer; font-size: 15px; }
+.chk:last-of-type { border-bottom: none; }
+.chk input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; accent-color: var(--accent); }
+.chk.done span { text-decoration: line-through; color: var(--hint); }
+/* ── Психообразование: карточки-аккордеон ── */
+.pe details { border-bottom: 1px solid rgba(128,128,128,0.15); padding: 6px 0; }
+.pe details:last-child { border-bottom: none; }
+.pe summary { font-weight: 600; font-size: 15px; cursor: pointer; list-style: none; padding: 4px 0; display: flex; gap: 8px; }
+.pe summary::before { content: '›'; color: var(--hint); font-weight: 700; transition: transform .15s; }
+.pe details[open] summary::before { transform: rotate(90deg); }
+.pe p { margin: 4px 0 6px 18px; font-size: 14.5px; line-height: 1.5; }
+.rx-why { color: var(--hint); font-size: 13.5px; margin-top: 2px; padding-left: 22px; }
+.empty { color: var(--hint); font-size: 14px; padding: 4px 0; }
 </style>
 </head>
 <body>
 
 <!-- ══════════ ГЛАВНЫЙ ЭКРАН ══════════ -->
 <div id="scr-home" class="screen active">
-  <h1 id="hello">Здравствуйте!</h1>
+  <!-- SOS — из любого места главного экрана без скролла; язык — RU/TJ -->
+  <div class="topbar">
+    <button class="lang" id="lang-btn" type="button">TJ</button>
+    <button class="sos" id="sos-btn" type="button">🆘 SOS</button>
+  </div>
+  <h1 id="hello" data-i18n="hello">Здравствуйте!</h1>
   <p class="sub" id="who" style="display:none; font-weight:600;"></p>
-  <p class="sub" id="updated">Личный кабинет</p>
+  <p class="sub" id="updated" data-i18n="cabinet">Личный кабинет</p>
+
+  <!-- ⏳ Неотправленное: sendData был недоступен (кабинет открыт не из бота) — отправим теперь -->
+  <div class="card" id="pending-card" style="display:none; border-left:4px solid var(--accent);">
+    <h2>⏳ <span data-i18n="pendingTitle">Есть неотправленное</span></h2>
+    <div class="muted" id="pending-text"></div>
+    <div class="row"><button id="pending-send" data-i18n="pendingBtn">Отправить сейчас</button><button id="pending-drop" class="ghost" data-i18n="pendingDrop">Удалить</button></div>
+  </div>
 
   <div class="card" id="note-card" style="display:none; border-left:4px solid var(--accent);">
-    <h2>💬 От вашего врача</h2>
+    <h2>💬 <span data-i18n="fromDoctor">От вашего врача</span></h2>
     <div id="note-text" style="white-space:pre-wrap; font-size:15px; line-height:1.55;"></div>
   </div>
 
   <div class="card" id="visit-card" style="display:none;">
-    <h2>🗓 Ближайший визит</h2>
+    <h2>🗓 <span data-i18n="nextVisit">Ближайший визит</span></h2>
     <div id="visit-when" style="font-size:18px; font-weight:700;"></div>
     <div id="visit-days" style="font-weight:600; color:var(--accent);"></div>
     <div class="muted" id="visit-note"></div>
     <!-- Подтверждённый визит: кнопку «Приду» заменяет статус — действие
          завершено, повторно подтверждать нечего; «Перенести» остаётся -->
-    <div id="visit-confirmed" style="display:none; margin-top:8px; font-weight:600; color:var(--ok);">✅ Вы подтвердили — ждём вас!</div>
+    <div id="visit-confirmed" style="display:none; margin-top:8px; font-weight:600; color:var(--ok);">✅ <span data-i18n="confirmed">Вы подтвердили — ждём вас!</span></div>
     <div class="row">
-      <button id="visit-yes">✅ Приду</button>
-      <button id="visit-no" class="ghost">🔁 Перенести</button>
+      <button id="visit-yes">✅ <span data-i18n="willCome">Приду</span></button>
+      <button id="visit-no" class="ghost">🔁 <span data-i18n="reschedule">Перенести</span></button>
     </div>
   </div>
 
   <div class="card" id="dx-card" style="display:none;">
-    <h2>🩺 Диагноз</h2>
+    <h2>🩺 <span data-i18n="diagnosis">Диагноз</span></h2>
     <div id="dx-text"></div>
   </div>
 
   <!-- 📌 «Что дальше»: шаги из решения врача по вашей динамике — дата и
        действие; опросник открывается в один клик (view.nextSteps). -->
   <div class="card" id="steps-card" style="display:none;">
-    <h2>📌 Что дальше</h2>
+    <h2>📌 <span data-i18n="whatNext">Что дальше</span></h2>
     <div id="steps-body"></div>
   </div>
 
+  <!-- ✅ «Сегодня»: чек-лист действий от врача (view.todayActions). Отметки
+       хранятся на телефоне по дате и уходят врачу кнопкой или вместе с чек-ином. -->
+  <div class="card" id="today-card" style="display:none;">
+    <h2>✅ <span data-i18n="today">Сегодня</span></h2>
+    <div class="muted" data-i18n="todayHint">Отметьте, что удалось сделать сегодня.</div>
+    <div id="today-body"></div>
+    <div class="row"><button id="today-send" disabled data-i18n="markDone">Отметить выполненное</button></div>
+  </div>
+
   <div class="card" id="plan-card" style="display:none;">
-    <h2>🎯 План лечения</h2>
+    <h2>🎯 <span data-i18n="plan">План лечения</span></h2>
     <div id="plan-body"></div>
   </div>
 
   <div class="card" id="rx-card" style="display:none;">
-    <h2>💊 Назначения</h2>
+    <h2>💊 <span data-i18n="rx">Назначения</span></h2>
     <div id="rx-body"></div>
   </div>
 
   <div class="card" id="rec-card" style="display:none;">
-    <h2>📋 Рекомендации</h2>
+    <h2>📋 <span data-i18n="recs">Рекомендации</span></h2>
     <div id="rec-body" style="white-space:pre-wrap; font-size:14.5px;"></div>
   </div>
 
   <div class="card" id="progress-card" style="display:none;">
-    <h2>📈 Динамика</h2>
+    <h2>📈 <span data-i18n="progress">Динамика</span></h2>
     <div id="progress-body"></div>
-    <div class="muted">Интерпретацию баллов даёт врач — цифры без контекста могут пугать зря.</div>
+    <div class="muted" data-i18n="progressHint">Интерпретацию баллов даёт врач — цифры без контекста могут пугать зря.</div>
+  </div>
+
+  <!-- 📚 «Понять своё состояние»: карточки по треку врача (view.track) -->
+  <div class="card pe" id="pe-card" style="display:none;">
+    <h2>📚 <span data-i18n="understand">Понять своё состояние</span></h2>
+    <div id="pe-body"></div>
   </div>
 
   <div class="card" id="scales-card">
-    <h2>📊 Опросники</h2>
-    <div class="muted" id="scales-hint">Заполняются дома, результат сразу уходит врачу.</div>
+    <h2>📊 <span data-i18n="scales">Опросники</span></h2>
+    <div class="muted" id="scales-hint" data-i18n="scalesHint">Заполняются дома, результат сразу уходит врачу.</div>
     <div class="row" id="scales-row"></div>
+    <div class="empty" id="scales-empty" style="display:none;" data-i18n="scalesEmpty">Врач ещё не назначил опросники — они появятся здесь после приёма.</div>
   </div>
 
   <!-- 👨‍👩‍👧 Guardian-режим (ребёнок до 16): дневник дня вместо самоотчётов -->
   <div class="card" id="diary-card" style="display:none;">
-    <h2>👨‍👩‍👧 Дневник дня</h2>
-    <div class="muted">Отметьте, как прошёл день ребёнка, — врач видит картину между визитами.</div>
-    <div class="seg-label">😴 Сон</div>
+    <h2>👨‍👩‍👧 <span data-i18n="diaryTitle">Дневник дня</span></h2>
+    <div class="muted" data-i18n="diaryHint">Отметьте, как прошёл день ребёнка, — врач видит картину между визитами.</div>
+    <div class="seg-label">😴 <span data-i18n="sleep">Сон</span></div>
     <div class="seg" data-k="sleep">
-      <button data-v="1">Хорошо</button><button data-v="2">Средне</button><button data-v="3">Плохо</button>
+      <button data-v="1" data-i18n="good">Хорошо</button><button data-v="2" data-i18n="avg">Средне</button><button data-v="3" data-i18n="bad">Плохо</button>
     </div>
-    <div class="seg-label">🍽 Аппетит</div>
+    <div class="seg-label">🍽 <span data-i18n="appetite">Аппетит</span></div>
     <div class="seg" data-k="appetite">
-      <button data-v="1">Хорошо</button><button data-v="2">Средне</button><button data-v="3">Плохо</button>
+      <button data-v="1" data-i18n="good">Хорошо</button><button data-v="2" data-i18n="avg">Средне</button><button data-v="3" data-i18n="bad">Плохо</button>
     </div>
-    <div class="seg-label">⚡ Вспышки / истерики</div>
+    <div class="seg-label">⚡ <span data-i18n="outbursts">Вспышки / истерики</span></div>
     <div class="seg" data-k="outbursts">
-      <button data-v="0">Не было</button><button data-v="1">1–2</button><button data-v="2">Много</button>
+      <button data-v="0" data-i18n="none">Не было</button><button data-v="1">1–2</button><button data-v="2" data-i18n="many">Много</button>
     </div>
-    <textarea id="diary-note" rows="2" maxlength="400" placeholder="Пара слов о дне (необязательно)"></textarea>
-    <div class="row"><button id="diary-send" disabled>Отправить врачу</button></div>
+    <textarea id="diary-note" rows="2" maxlength="400" data-i18n-ph="diaryNotePh" placeholder="Пара слов о дне (необязательно)"></textarea>
+    <div class="row"><button id="diary-send" disabled data-i18n="sendDoctor">Отправить врачу</button></div>
   </div>
 
   <div class="card" id="mood-card">
-    <h2>🙂 Как вы сегодня?</h2>
+    <h2>🙂 <span data-i18n="howToday">Как вы сегодня?</span></h2>
     <div class="mood-row" id="mood-row">
       <button class="mood" data-m="1">😞</button>
       <button class="mood" data-m="2">🙁</button>
@@ -183,40 +230,45 @@ textarea {
       <button class="mood" data-m="4">🙂</button>
       <button class="mood" data-m="5">😄</button>
     </div>
-    <textarea id="mood-note" rows="2" maxlength="400" placeholder="Пара слов о самочувствии (необязательно)"></textarea>
-    <div class="row"><button id="mood-send" disabled>Отправить врачу</button></div>
+    <!-- 😴 Сон прошлой ночью — одно число, ранний предвестник эпизода -->
+    <div class="seg-label">😴 <span data-i18n="sleepLastNight">Сон прошлой ночью, часов</span></div>
+    <div class="seg" id="sleep-row">
+      <button data-h="4">≤4</button><button data-h="5">5</button><button data-h="6">6</button><button data-h="7">7</button><button data-h="8">8</button><button data-h="9">9+</button>
+    </div>
+    <textarea id="mood-note" rows="2" maxlength="400" data-i18n-ph="moodNotePh" placeholder="Пара слов о самочувствии (необязательно)"></textarea>
+    <div class="row"><button id="mood-send" disabled data-i18n="sendDoctor">Отправить врачу</button></div>
   </div>
 
   <div class="card" id="log-card" style="display:none;">
-    <h2>🗒 Журнал</h2>
+    <h2>🗒 <span data-i18n="journal">Журнал</span></h2>
     <div id="log-body"></div>
-    <div class="muted" style="margin-top:6px;">Последние сообщения — полная переписка в чате бота.</div>
+    <div class="muted" style="margin-top:6px;" data-i18n="journalHint">Последние сообщения — полная переписка в чате бота.</div>
   </div>
 
   <div class="card">
-    <h2>📎 Анализы и документы</h2>
-    <div style="font-size:14.5px; line-height:1.45;">
+    <h2>📎 <span data-i18n="docs">Анализы и документы</span></h2>
+    <div style="font-size:14.5px; line-height:1.45;" data-i18n-html="docsText">
       Просто отправьте фото или PDF <b>в этот чат</b> — как обычное сообщение: скрепка 📎
       или «Галерея» рядом с полем ввода. Файл сразу попадёт в вашу карту к врачу, бот подтвердит получение.
     </div>
-    <div class="row"><button id="btn-doc" class="ghost">📎 Перейти в чат и прислать файл</button></div>
-    <div class="muted" style="margin-top:6px;">Документы от врача тоже приходят в этот чат. До 5 МБ на файл.</div>
+    <div class="row"><button id="btn-doc" class="ghost">📎 <span data-i18n="docBtn">Перейти в чат и прислать файл</span></button></div>
+    <div class="muted" style="margin-top:6px;" data-i18n="docsHint">Документы от врача тоже приходят в этот чат. До 5 МБ на файл.</div>
   </div>
 
   <div class="card">
-    <h2>👨‍⚕️ Связь с врачом</h2>
-    <div class="row"><button id="btn-book" class="ghost">🗓 Записаться на приём</button></div>
-    <textarea id="msg-text" rows="2" maxlength="900" placeholder="Сообщение врачу (не экстренно) — ответ придёт в чат"></textarea>
-    <div class="row"><button id="msg-send" disabled>✉️ Отправить сообщение</button></div>
+    <h2>👨‍⚕️ <span data-i18n="contact">Связь с врачом</span></h2>
+    <div class="row"><button id="btn-book" class="ghost">🗓 <span data-i18n="book">Записаться на приём</span></button></div>
+    <textarea id="msg-text" rows="2" maxlength="900" data-i18n-ph="msgPh" placeholder="Сообщение врачу (не экстренно) — ответ придёт в чат"></textarea>
+    <div class="row"><button id="msg-send" disabled>✉️ <span data-i18n="sendMsg">Отправить сообщение</span></button></div>
   </div>
 
-  <div class="card crisis">
-    <h2>🆘 Помощь сейчас</h2>
+  <div class="card crisis" id="crisis-card">
+    <h2>🆘 <span data-i18n="helpNow">Помощь сейчас</span></h2>
     <div id="crisis-body" style="font-size:14.5px;"></div>
     <div style="margin-top:8px; font-size:14.5px;">
-      Скорая помощь: <a href="tel:103">103</a> · Единый номер: <a href="tel:112">112</a>
+      <span data-i18n="ambulance">Скорая помощь</span>: <a href="tel:103">103</a> · <span data-i18n="single">Единый номер</span>: <a href="tel:112">112</a>
     </div>
-    <div class="muted" style="margin-top:6px;">
+    <div class="muted" style="margin-top:6px;" data-i18n="notMonitored">
       Этот кабинет и чат врач читает в рабочее время — они не заменяют экстренную помощь.
     </div>
   </div>
@@ -226,7 +278,7 @@ textarea {
 
 <!-- ══════════ ЭКРАН ОПРОСНИКА ══════════ -->
 <div id="scr-scale" class="screen">
-  <button class="ghost" id="scale-back" style="flex:none; min-width:0; padding:7px 14px; margin-bottom:10px;">← Назад</button>
+  <button class="ghost" id="scale-back" style="flex:none; min-width:0; padding:7px 14px; margin-bottom:10px;" data-i18n="back">← Назад</button>
   <div class="card">
     <h2 id="scale-title"></h2>
     <div class="muted" id="scale-instr"></div>
@@ -241,17 +293,17 @@ textarea {
 <!-- ══════════ КРИЗИСНЫЙ ЭКРАН (PHQ-9 п.9) ══════════ -->
 <div id="crisis-overlay" class="overlay">
   <div class="card crisis">
-    <h2>🆘 Вы не одни</h2>
-    <p style="font-size:16px;">Вы отметили мысли о смерти или причинении себе вреда.
+    <h2>🆘 <span data-i18n="youNotAlone">Вы не одни</span></h2>
+    <p style="font-size:16px;" id="crisis-lead" data-i18n="crisisLead">Вы отметили мысли о смерти или причинении себе вреда.
     Это важный ответ — врач его обязательно увидит.</p>
-    <p style="font-weight:700;">Если вам опасно прямо сейчас — не ждите ответа в приложении:</p>
+    <p style="font-weight:700;" data-i18n="crisisNow">Если вам опасно прямо сейчас — не ждите ответа в приложении:</p>
     <div style="font-size:18px; margin:8px 0;">
-      📞 Скорая помощь: <a href="tel:103">103</a><br>
-      📞 Единый номер: <a href="tel:112">112</a>
+      📞 <span data-i18n="ambulance">Скорая помощь</span>: <a href="tel:103">103</a><br>
+      📞 <span data-i18n="single">Единый номер</span>: <a href="tel:112">112</a>
     </div>
     <div id="crisis-clinic" style="font-size:15px;"></div>
-    <p class="muted">Приложение не читают круглосуточно. Звонок — быстрее.</p>
-    <div class="row"><button id="crisis-continue">Понятно, продолжить опрос</button></div>
+    <p class="muted" data-i18n="crisisCall">Приложение не читают круглосуточно. Звонок — быстрее.</p>
+    <div class="row"><button id="crisis-continue" data-i18n="crisisContinue">Понятно, продолжить опрос</button></div>
   </div>
 </div>
 
@@ -3253,6 +3305,179 @@ const SCALES = {
    показывается прежний взрослый дефолт (детям — ничего). */
 const DEFAULT_SCALES = { adult: ['PHQ-9', 'GAD-7'], teen: ['PHQ-9', 'GAD-7'], child: [] };
 
+/* ── 🌐 Язык интерфейса: RU / TJ. Переводятся только элементы кабинета
+      (заголовки, кнопки, подсказки). Тексты опросников остаются на русском:
+      переведённая шкала без валидации — другой инструмент, баллы не сравнимы.
+      Карточки психообразования тоже пока на русском. ── */
+const I18N = {
+  ru: {
+    hello: 'Здравствуйте!', helloName: 'Здравствуйте, {name}!', cabinet: 'Личный кабинет',
+    childCabinet: 'Кабинет вашего ребёнка{name} — дневник и вопросы заполняет родитель.',
+    updatedAt: 'Кабинет обновлён: {d}', staleLink: ' · открыта старая ссылка — показаны последние данные',
+    decodeFailed: 'Не удалось прочитать данные — откройте кабинет по самой свежей кнопке от бота.',
+    noData: 'Данные кабинета появятся после обновления от врача — откройте кабинет по свежей кнопке из чата. Опросники и чек-ин уже работают.',
+    fromDoctor: 'От вашего врача', nextVisit: 'Ближайший визит', willCome: 'Приду', reschedule: 'Перенести',
+    confirmed: 'Вы подтвердили — ждём вас!', todayBang: 'Сегодня!', tomorrow: 'Завтра', inDays: 'Через {n} дн.',
+    diagnosis: 'Диагноз', whatNext: 'Что дальше', today: 'Сегодня', todayHint: 'Отметьте, что удалось сделать сегодня.',
+    markDone: 'Отметить выполненное', allDone: 'Всё выполнено — отлично!', waitedBy: 'Ждали к {d}',
+    fillNow: 'Заполнить сейчас', bookNow: 'Записаться', botSlots: 'Бот пришлёт свободное время в чат — выберите кнопкой.',
+    labPhoto: 'Результат пришлите фото в чат боту — он попадёт врачу в карту.',
+    plan: 'План лечения', rx: 'Назначения', why: 'зачем', recs: 'Рекомендации', progress: 'Динамика',
+    progressHint: 'Интерпретацию баллов даёт врач — цифры без контекста могут пугать зря.', lastScore: 'последний балл',
+    understand: 'Понять своё состояние', scales: 'Опросники',
+    scalesHint: 'Заполняются дома, результат сразу уходит врачу.',
+    scalesHintChild: 'Заполняются дома, результат сразу уходит врачу. 👨‍👩‍👧 — заполняет родитель, 🧒 — ребёнок (можно вместе).',
+    scalesEmpty: 'Врач ещё не назначил опросники — они появятся здесь после приёма.',
+    diaryTitle: 'Дневник дня', diaryHint: 'Отметьте, как прошёл день ребёнка, — врач видит картину между визитами.',
+    sleep: 'Сон', appetite: 'Аппетит', outbursts: 'Вспышки / истерики', good: 'Хорошо', avg: 'Средне', bad: 'Плохо',
+    none: 'Не было', many: 'Много', diaryNotePh: 'Пара слов о дне (необязательно)', sendDoctor: 'Отправить врачу',
+    howToday: 'Как вы сегодня?', sleepLastNight: 'Сон прошлой ночью, часов',
+    moodNotePh: 'Пара слов о самочувствии (необязательно)',
+    pickMood: 'Выберите смайлик настроения — это главное, что нужно врачу.',
+    journal: 'Журнал', journalHint: 'Последние сообщения — полная переписка в чате бота.', you: 'Вы', clinic: 'Клиника',
+    docs: 'Анализы и документы',
+    docsText: 'Просто отправьте фото или PDF <b>в этот чат</b> — как обычное сообщение: скрепка 📎 или «Галерея» рядом с полем ввода. Файл сразу попадёт в вашу карту к врачу, бот подтвердит получение.',
+    docBtn: 'Перейти в чат и прислать файл', docsHint: 'Документы от врача тоже приходят в этот чат. До 5 МБ на файл.',
+    contact: 'Связь с врачом', book: 'Записаться на приём', msgPh: 'Сообщение врачу (не экстренно) — ответ придёт в чат',
+    msgPhChild: 'Сообщение врачу о ребёнке (не экстренно) — ответ придёт в чат', sendMsg: 'Отправить сообщение',
+    helpNow: 'Помощь сейчас', ambulance: 'Скорая помощь', single: 'Единый номер',
+    notMonitored: 'Этот кабинет и чат врач читает в рабочее время — они не заменяют экстренную помощь.',
+    youNotAlone: 'Вы не одни',
+    crisisLead: 'Вы отметили мысли о смерти или причинении себе вреда. Это важный ответ — врач его обязательно увидит.',
+    crisisSos: 'Если вам сейчас плохо — вы не одни. Ниже телефоны, по которым помогут прямо сейчас.',
+    crisisNow: 'Если вам опасно прямо сейчас — не ждите ответа в приложении:',
+    crisisCall: 'Приложение не читают круглосуточно. Звонок — быстрее.', crisisContinue: 'Понятно, продолжить опрос', crisisClose: 'Закрыть',
+    back: '← Назад', question: 'Вопрос {n} из {m}',
+    pendingTitle: 'Есть неотправленное', pendingBtn: 'Отправить сейчас', pendingDrop: 'Удалить',
+    pendingText: 'В прошлый раз отправка не удалась ({what}). Сейчас можно отправить.',
+    pendingSaved: 'Отправить не удалось — кабинет открыт не из чата бота. Ответ сохранён на телефоне и отправится при следующем открытии через кнопку в чате.',
+    what_checkin: 'самочувствие', what_diary: 'дневник дня', what_scale: 'опросник', what_actions: 'отметки за день', what_msg: 'сообщение врачу', what_other: 'ответ',
+    footer: 'МирМед · кабинет пациента · данные хранятся на этом телефоне', footerShort: 'МирМед · кабинет пациента',
+    peNote: 'Карточки пока на русском языке.',
+    confirmVisitYes: 'Подтвердить, что придёте?', confirmVisitNo: 'Попросить врача перенести визит? Бот пришлёт свободное время в чат.',
+    confirmCheckin: 'Отправить самочувствие врачу?', confirmDiary: 'Отправить дневник дня врачу?', confirmActions: 'Отправить отметки врачу?',
+    confirmBook: 'Запросить запись на приём? Бот пришлёт свободное время в чат.',
+    confirmDoc: 'Отправить анализ? Кабинет закроется, а бот подскажет в чате, как прикрепить файл.',
+    confirmMsg: 'Отправить сообщение врачу?', confirmScale: 'Отправить ответы врачу?',
+    confirmStepBook: 'Попросить врача записать вас на приём? Бот пришлёт свободное время в чат.',
+    willClose: ' Окно закроется после отправки.'
+  },
+  tg: {
+    hello: 'Салом!', helloName: 'Салом, {name}!', cabinet: 'Кабинети шахсӣ',
+    childCabinet: 'Кабинети кӯдаки шумо{name} — рӯзнома ва саволҳоро волид пур мекунад.',
+    updatedAt: 'Кабинет нав шуд: {d}', staleLink: ' · пайванди кӯҳна кушода шуд — маълумоти охирин нишон дода шуд',
+    decodeFailed: 'Маълумот хонда нашуд — кабинетро аз тугмаи навтарини бот кушоед.',
+    noData: 'Маълумоти кабинет пас аз навсозии духтур пайдо мешавад — кабинетро аз тугмаи нав дар чат кушоед. Пурсишномаҳо ва чек-ин аллакай кор мекунанд.',
+    fromDoctor: 'Аз духтури шумо', nextVisit: 'Ташрифи навбатӣ', willCome: 'Меоям', reschedule: 'Ба вақти дигар',
+    confirmed: 'Шумо тасдиқ кардед — интизори шумоем!', todayBang: 'Имрӯз!', tomorrow: 'Пагоҳ', inDays: 'Пас аз {n} рӯз',
+    diagnosis: 'Ташхис', whatNext: 'Баъд чӣ', today: 'Имрӯз', todayHint: 'Қайд кунед, ки имрӯз чӣ кор карда тавонистед.',
+    markDone: 'Иҷрошударо қайд кардан', allDone: 'Ҳама иҷро шуд — аъло!', waitedBy: 'То {d} интизор буд',
+    fillNow: 'Ҳозир пур кардан', bookNow: 'Навишта шудан', botSlots: 'Бот вақти холиро ба чат мефиристад — бо тугма интихоб кунед.',
+    labPhoto: 'Натиҷаро сурат карда ба чати бот фиристед — он ба духтур меравад.',
+    plan: 'Нақшаи табобат', rx: 'Таъинот', why: 'барои чӣ', recs: 'Тавсияҳо', progress: 'Динамика',
+    progressHint: 'Тафсири холҳоро духтур медиҳад — рақамҳо бе шарҳ метавонанд беҳуда тарсонанд.', lastScore: 'холи охирин',
+    understand: 'Ҳолати худро фаҳмидан', scales: 'Пурсишномаҳо',
+    scalesHint: 'Дар хона пур карда мешаванд, натиҷа фавран ба духтур меравад.',
+    scalesHintChild: 'Дар хона пур карда мешаванд, натиҷа фавран ба духтур меравад. 👨‍👩‍👧 — волид пур мекунад, 🧒 — кӯдак (якҷоя мумкин).',
+    scalesEmpty: 'Духтур ҳанӯз пурсишнома таъин накардааст — онҳо пас аз қабул дар ин ҷо пайдо мешаванд.',
+    diaryTitle: 'Рӯзномаи рӯз', diaryHint: 'Қайд кунед, ки рӯзи кӯдак чӣ гуна гузашт — духтур вазъро байни ташрифҳо мебинад.',
+    sleep: 'Хоб', appetite: 'Иштиҳо', outbursts: 'Хуруҷҳо / истерия', good: 'Хуб', avg: 'Миёна', bad: 'Бад',
+    none: 'Набуд', many: 'Бисёр', diaryNotePh: 'Чанд калима дар бораи рӯз (ихтиёрӣ)', sendDoctor: 'Ба духтур фиристодан',
+    howToday: 'Имрӯз чӣ хел ҳастед?', sleepLastNight: 'Хоби шаби гузашта, соат',
+    moodNotePh: 'Чанд калима дар бораи ҳолатон (ихтиёрӣ)',
+    pickMood: 'Смайлики рӯҳияро интихоб кунед — ин чизи асосӣ барои духтур аст.',
+    journal: 'Паёмҳо', journalHint: 'Паёмҳои охирин — мукотибаи пурра дар чати бот.', you: 'Шумо', clinic: 'Клиника',
+    docs: 'Таҳлилҳо ва ҳуҷҷатҳо',
+    docsText: 'Сурат ё PDF-ро <b>ба ин чат</b> фиристед — ҳамчун паёми оддӣ: тугмаи 📎 ё «Галерея» дар назди майдони навиштан. Файл фавран ба кортаи шумо назди духтур меравад, бот қабулро тасдиқ мекунад.',
+    docBtn: 'Ба чат гузаштан ва файл фиристодан', docsHint: 'Ҳуҷҷатҳо аз духтур ҳам ба ин чат меоянд. То 5 МБ барои як файл.',
+    contact: 'Алоқа бо духтур', book: 'Ба қабул навишта шудан', msgPh: 'Паём ба духтур (ғайритаъҷилӣ) — ҷавоб ба чат меояд',
+    msgPhChild: 'Паём ба духтур дар бораи кӯдак (ғайритаъҷилӣ) — ҷавоб ба чат меояд', sendMsg: 'Паём фиристодан',
+    helpNow: 'Кӯмак ҳозир', ambulance: 'Ёрии таъҷилӣ', single: 'Рақами ягона',
+    notMonitored: 'Ин кабинет ва чатро духтур дар вақти корӣ мехонад — онҳо ёрии таъҷилиро иваз намекунанд.',
+    youNotAlone: 'Шумо танҳо нестед',
+    crisisLead: 'Шумо фикрҳо дар бораи марг ё зарар ба худро қайд кардед. Ин ҷавоби муҳим аст — духтур онро ҳатман мебинад.',
+    crisisSos: 'Агар ҳозир ба шумо бад бошад — шумо танҳо нестед. Дар зер рақамҳое, ки ҳозир кӯмак мекунанд.',
+    crisisNow: 'Агар ҳозир ба шумо хатар бошад — ҷавобро дар барнома интизор нашавед:',
+    crisisCall: 'Барномаро шабу рӯз намехонанд. Занг задан тезтар аст.', crisisContinue: 'Фаҳмо, пурсишро давом додан', crisisClose: 'Пӯшидан',
+    back: '← Бозгашт', question: 'Саволи {n} аз {m}',
+    pendingTitle: 'Фиристоданашуда ҳаст', pendingBtn: 'Ҳозир фиристодан', pendingDrop: 'Нест кардан',
+    pendingText: 'Бори гузашта фиристодан нашуд ({what}). Ҳозир фиристодан мумкин.',
+    pendingSaved: 'Фиристодан нашуд — кабинет аз чати бот кушода нашудааст. Ҷавоб дар телефон нигоҳ дошта шуд ва ҳангоми кушодани навбатӣ аз тугмаи чат фиристода мешавад.',
+    what_checkin: 'ҳолат', what_diary: 'рӯзномаи рӯз', what_scale: 'пурсишнома', what_actions: 'қайдҳои рӯз', what_msg: 'паём ба духтур', what_other: 'ҷавоб',
+    footer: 'МирМед · кабинети бемор · маълумот дар ин телефон нигоҳ дошта мешавад', footerShort: 'МирМед · кабинети бемор',
+    peNote: 'Кортҳо ҳоло бо забони русӣ.',
+    confirmVisitYes: 'Тасдиқ кунед, ки меоед?', confirmVisitNo: 'Аз духтур хоҳиш кунед, ки ташрифро ба вақти дигар гузаронад? Бот вақти холиро ба чат мефиристад.',
+    confirmCheckin: 'Ҳолатро ба духтур фиристодан?', confirmDiary: 'Рӯзномаи рӯзро ба духтур фиристодан?', confirmActions: 'Қайдҳоро ба духтур фиристодан?',
+    confirmBook: 'Дархости навбат ба қабул? Бот вақти холиро ба чат мефиристад.',
+    confirmDoc: 'Таҳлил фиристодан? Кабинет пӯшида мешавад ва бот дар чат мегӯяд, чӣ тавр файл замима кунед.',
+    confirmMsg: 'Паёмро ба духтур фиристодан?', confirmScale: 'Ҷавобҳоро ба духтур фиристодан?',
+    confirmStepBook: 'Аз духтур хоҳиш кунед, ки шуморо ба қабул нависад? Бот вақти холиро ба чат мефиристад.',
+    willClose: ' Тиреза пас аз фиристодан пӯшида мешавад.'
+  }
+};
+let lang = 'ru';
+try { lang = localStorage.getItem('mm_lang') === 'tg' ? 'tg' : 'ru'; } catch {}
+const T = (key, vars) => {
+  let s = (I18N[lang] && I18N[lang][key]) || I18N.ru[key] || key;
+  if (vars) for (const k of Object.keys(vars)) s = s.split('{' + k + '}').join(String(vars[k]));
+  return s;
+};
+function applyI18n() {
+  document.documentElement.lang = lang === 'tg' ? 'tg' : 'ru';
+  document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = T(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = T(el.dataset.i18nPh); });
+  document.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = T(el.dataset.i18nHtml); });
+  $('lang-btn').textContent = lang === 'tg' ? 'RU' : 'TJ';
+}
+
+/* ── 📚 «Понять своё состояние»: карточки по трекам. Правила контента:
+      4–6 предложений, без терминов и кодов, без запугивания, каждая карточка
+      заканчивается тем, что можно сделать. Трек выбирает врач (view.track). ── */
+const PSYCHOED = {
+  depression: [
+    ['Почему сил нет даже на простое', 'Сниженное настроение — не лень и не слабость характера. Когда энергии мало, мозг экономит её на всём, включая радость и желание действовать. Поэтому «взять себя в руки» не работает, а маленькие шаги работают. Один короткий выход на улицу сегодня важнее большого плана на неделю.'],
+    ['Лекарству нужно время', 'Антидепрессанты действуют не как обезболивающее. Первые две недели тело привыкает, эффект на настроение приходит на третьей-четвёртой. Если стало чуть легче — это не повод прекращать: именно продолжение приёма закрепляет результат. Любые изменения дозы — только вместе с врачом.'],
+    ['Утро тяжелее, вечер легче', 'При сниженном настроении самочувствие часто хуже утром и лучше к вечеру. Это известная особенность, а не ухудшение. Планируйте важные дела на ту часть дня, когда есть силы. Утром достаточно встать, умыться и поесть.'],
+    ['Движение как лекарство', 'Ходьба 20–30 минут в день влияет на настроение сравнимо с лёгкими препаратами — это подтверждено исследованиями. Не нужен спорт и рекорды, нужна регулярность. Если 30 минут много, начните с 10. Считается любая прогулка, даже до магазина.'],
+    ['Когда звонить, не дожидаясь визита', 'Если мысли о том, что жить не стоит, стали чаще или отчётливее — не ждите приёма. Позвоните в клинику или по номерам из раздела «Помощь сейчас». Это не слабость, а правильное действие, которого врач от вас ждёт.']
+  ],
+  anxiety: [
+    ['Тревога — сигнализация, которая срабатывает слишком легко', 'Тело включает тревогу, чтобы защитить от опасности: сердце быстрее, дыхание чаще, мышцы напряжены. При тревожном расстройстве сигнализация срабатывает без реальной угрозы. Ощущения неприятные, но не опасные: сердцебиение от тревоги не вредит сердцу. Само понимание этого уже снижает волну.'],
+    ['Волна проходит сама', 'Приступ тревоги нарастает, достигает пика и спадает обычно за 10–20 минут — даже если ничего не делать. Попытки «сбежать» учат мозг, что ситуация была опасной. Если удаётся остаться и переждать, следующая волна слабее. Медленный выдох длиннее вдоха помогает переждать.'],
+    ['Избегание кормит тревогу', 'Каждый раз, когда мы отказываемся от пугающего дела, становится легче на минуту и страшнее надолго. Постепенное возвращение к таким делам маленькими шагами — основа лечения. Врач поможет выстроить шаги, начиная с самых лёгких.'],
+    ['Кофе, сон и экран', 'Кофеин, недосып и поздний экран усиливают тревогу физически, не через мысли. Меньше кофе после обеда, сон в одно время и телефон за час до сна дают заметный эффект за пару недель. Это не запреты, а рычаги, которые в ваших руках.'],
+    ['Как работает лекарство', 'Препараты от тревоги из группы антидепрессантов действуют медленно, 2–4 недели, и в первые дни могут чуть усиливать беспокойство. Это ожидаемо и проходит. Если стало заметно хуже — напишите врачу: дозу можно подобрать мягче.']
+  ],
+  bipolar: [
+    ['Две стороны одного маятника', 'Настроение может уходить и вниз, и вверх. Подъём поначалу приятен: много энергии, мало сна, много идей. Но именно он чаще всего заканчивается тяжёлым спадом. Задача лечения — не убрать эмоции, а удержать маятник в рабочем коридоре.'],
+    ['Сон — самый ранний сигнал', 'Снижение потребности во сне на два и более часа несколько ночей подряд без усталости — частый предвестник подъёма. Отметка сна в кабинете нужна именно для этого. Если заметили такое — сообщите врачу, не дожидаясь визита.'],
+    ['Ровный режим — половина лечения', 'Постоянное время сна и подъёма, еды и активности стабилизирует настроение само по себе. Ночные смены, перелёты и «отосплюсь в выходные» раскачивают маятник. Один и тот же час подъёма в будни и выходные — простое и сильное правило.'],
+    ['Стабилизатор работает только при регулярном приёме', 'Лекарство удерживает настроение в коридоре, пока уровень в крови ровный. Пропуски снижают защиту, а отмена «потому что всё хорошо» — самая частая причина возврата. Хорошее самочувствие и есть результат приёма.'],
+    ['Договоритесь с близкими', 'Ранние признаки подъёма человек часто замечает у себя последним: меньше сна, быстрая речь, траты, раздражительность. Договоритесь с близким, что он скажет вам об этом, и это не будет обидой. Алкоголь и стимуляторы усиливают колебания — их лучше исключить.']
+  ],
+  sleep: [
+    ['Кровать — только для сна', 'Если в кровати читать, смотреть телефон и переживать, мозг перестаёт связывать её со сном. Ложитесь, когда действительно хочется спать, и делайте в кровати только одно. Через 1–2 недели связь «кровать = сон» восстанавливается.'],
+    ['Одно время подъёма', 'Для сна важнее не время отбоя, а постоянное время подъёма — в будни и выходные. Оно задаёт внутренние часы. Даже после плохой ночи вставайте в то же время: досыпание днём сдвигает следующую ночь.'],
+    ['Не лежать без сна', 'Если не спится 20 минут — встаньте, займитесь чем-то тихим при тусклом свете и вернитесь, когда потянет в сон. Лежать и «стараться уснуть» — самый надёжный способ не уснуть.'],
+    ['Свет, кофе, экраны', 'Яркий свет утром и тусклый вечером — главный регулятор сна. Кофе после обеда работает до ночи. Экран телефона за час до сна отодвигает засыпание. Эти три рычага дают эффект быстрее любых таблеток.'],
+    ['Снотворное — временная опора', 'Если назначено средство для сна, оно нужно, чтобы разорвать круг «боюсь не уснуть — не сплю». Принимайте только назначенный срок и только перед сном. Основное лечение — режим, а таблетка лишь помогает его выстроить.']
+  ],
+  asd: [
+    ['Особенность, а не ошибка воспитания', 'Особенности развития — врождённое устройство мозга. Вы не виноваты, и «строгость» или «мягкость» этого не вызывали. Зато ваша ежедневная работа с ребёнком влияет на его развитие сильнее любого лекарства.'],
+    ['Предсказуемость снижает вспышки', 'Ребёнок тревожится от неожиданностей. Одинаковый порядок дня, предупреждение о смене занятия за 5 минут, картинки-расписание заметно снижают число вспышек. Вспышка чаще всего — перегрузка, а не каприз.'],
+    ['Что было ДО вспышки', 'Записывая, что происходило перед вспышкой — шум, голод, смена планов, усталость, — вы через пару недель увидите закономерность. Дневник в кабинете нужен именно для этого. По этим записям врач подберёт, что менять.'],
+    ['Маленькие шаги общения', '15 минут в день игры на полу, где вы следуете за интересом ребёнка, а не ведёте его, — метод с доказанным эффектом. Не учить, а присоединяться: повторять его действия и называть их словами.'],
+    ['Берегите себя', 'Родитель, который выгорел, не может помогать. Просить помощи у семьи, спать, иметь час на себя — это часть лечения ребёнка, а не эгоизм.']
+  ],
+  adhd: [
+    ['Не «не хочет», а «не может пока»', 'Внимание и самоконтроль у такого ребёнка созревают позже примерно на 2–3 года. Он не слышит с первого раза не из-за неуважения. Понимание этого снимает половину конфликтов.'],
+    ['Короткие инструкции и контакт глазами', 'Одна просьба за раз: подойти, назвать по имени, дождаться взгляда, сказать коротко, попросить повторить. Крик через комнату не работает ни с одним ребёнком, с этим — особенно.'],
+    ['Хвалить сразу и конкретно', 'Такой ребёнок слышит замечания в десять раз чаще похвалы. Ловите момент, когда он делает правильно, и называйте это сразу: «ты сам сел за уроки — здорово». Это меняет поведение быстрее наказаний.'],
+    ['Движение помогает вниманию', '30–60 минут активного движения в день улучшают внимание на следующие часы. Перед уроками — короткая пробежка или игра во дворе, а не «сначала сядь спокойно».'],
+    ['Лекарство и за чем смотреть', 'Если назначен препарат, он помогает вниманию в день приёма. Наблюдайте за аппетитом и сном и говорите о них врачу — дозу подбирают по этим наблюдениям. Отменять или менять самостоятельно не нужно.']
+  ]
+};
+
 /* ── Данные кабинета: URL-фрагмент → localStorage → рендер ── */
 const b64uToBytes = (s) => {
   const b = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
@@ -3315,19 +3540,38 @@ const fmtDate = (d, t) => {
   } catch { return d + (t ? ' · ' + t : ''); }
 };
 
-/* Единственная отправка за открытие: sendData закрывает мини-приложение. */
+/* Единственная отправка за открытие: sendData закрывает мини-приложение.
+   Если sendData недоступен (кабинет открыт не из чата бота) — ответ не
+   пропадает: кладём в очередь на телефоне и отправим при следующем открытии. */
 let sent = false;
+const PENDING_KEY = 'mm_pending';
+function readPending() { try { return JSON.parse(localStorage.getItem(PENDING_KEY) || 'null'); } catch { return null; } }
+function writePending(obj) { try { if (obj) localStorage.setItem(PENDING_KEY, JSON.stringify({ obj, at: Date.now() })); else localStorage.removeItem(PENDING_KEY); } catch {} }
+function canSend() { return !!(tg && tg.sendData && tg.initData); }
 function send(obj) {
   if (sent) return;
-  sent = true;
-  if (tg && tg.sendData) tg.sendData(JSON.stringify(obj));
-  else alert('Откройте кабинет через кнопку в чате бота, чтобы отправка работала.');
+  if (canSend()) { sent = true; writePending(null); tg.sendData(JSON.stringify(obj)); return; }
+  writePending(obj);
+  const msg = T('pendingSaved');
+  if (tg && tg.showAlert) tg.showAlert(msg); else alert(msg);
+  showPending();
 }
-function confirmSend(text, obj) {
+function confirmSend(key, obj) {
+  const text = T(key);
   const go = () => send(obj);
-  if (tg && tg.showConfirm) tg.showConfirm(text + ' Окно закроется после отправки.', (ok) => { if (ok) go(); });
+  if (tg && tg.showConfirm) tg.showConfirm(text + T('willClose'), (ok) => { if (ok) go(); });
   else if (confirm(text)) go();
 }
+function showPending() {
+  const p = readPending();
+  const card = $('pending-card');
+  if (!p || !p.obj) { card.style.display = 'none'; return; }
+  const what = T('what_' + (['checkin', 'diary', 'scale', 'actions', 'msg'].includes(p.obj.t) ? p.obj.t : 'other'));
+  $('pending-text').textContent = T('pendingText', { what });
+  card.style.display = '';
+}
+$('pending-send').addEventListener('click', () => { const p = readPending(); if (p && p.obj) send(p.obj); });
+$('pending-drop').addEventListener('click', () => { writePending(null); showPending(); });
 
 function render(view) {
   /* 👨‍👩‍👧 Guardian-режим (ageGroup 'child', до 16 лет): телефон у родителя —
@@ -3346,29 +3590,29 @@ function render(view) {
     const who = d.reporter === 'parent' ? '👨‍👩‍👧 ' : d.reporter === 'child' ? '🧒 ' : '';
     return '<button data-scale="' + esc(id) + '" class="ghost scale-btn">' + who + esc(d.title) + '</button>';
   }).join('');
-  $('scales-card').style.display = scaleIds.length ? '' : 'none';
+  // Пустое состояние объясняет, а не молчит: карточка остаётся, кнопок нет
+  $('scales-empty').style.display = scaleIds.length ? 'none' : '';
+  $('scales-hint').style.display = scaleIds.length ? '' : 'none';
 
   if (ageGroup === 'child') {
-    $('hello').textContent = 'Здравствуйте!';
+    $('hello').textContent = T('hello');
     $('who').style.display = '';
-    $('who').textContent = 'Кабинет вашего ребёнка' + (pt.displayName ? ': ' + pt.displayName : '') + ' — дневник и вопросы заполняет родитель.';
-    $('scales-hint').textContent = 'Заполняются дома, результат сразу уходит врачу. 👨‍👩‍👧 — заполняет родитель, 🧒 — ребёнок (можно вместе).';
+    $('who').textContent = T('childCabinet', { name: pt.displayName ? ': ' + pt.displayName : '' });
+    $('scales-hint').textContent = T('scalesHintChild');
     $('mood-card').style.display = 'none';
     $('diary-card').style.display = '';
-    $('msg-text').placeholder = 'Сообщение врачу о ребёнке (не экстренно) — ответ придёт в чат';
+    $('msg-text').placeholder = T('msgPhChild');
   } else if (pt.displayName) {
-    $('hello').textContent = 'Здравствуйте, ' + pt.displayName + '!';
+    $('hello').textContent = T('helloName', { name: pt.displayName });
   }
   if (view && view.generatedAt) {
     const d = new Date(view.generatedAt);
-    $('updated').textContent = 'Кабинет обновлён: ' + d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-      + (staleLinkOpened ? ' · открыта старая ссылка — показаны последние данные' : '');
+    $('updated').textContent = T('updatedAt', { d: d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) })
+      + (staleLinkOpened ? T('staleLink') : '');
   } else {
-    $('updated').textContent = decodeFailed
-      ? 'Не удалось прочитать данные — откройте кабинет по самой свежей кнопке от бота.'
-      : 'Данные кабинета появятся после обновления от врача — откройте кабинет по свежей кнопке из чата. Опросники и чек-ин уже работают.';
+    $('updated').textContent = decodeFailed ? T('decodeFailed') : T('noData');
   }
-  if (!view) { $('footer').textContent = 'МирМед · кабинет пациента'; return; }
+  if (!view) { $('footer').textContent = T('footerShort'); return; }
 
   if (view.doctorNote) {
     $('note-card').style.display = '';
@@ -3382,8 +3626,8 @@ function render(view) {
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const vd = new Date(view.nextVisit.date + 'T00:00:00');
       const days = Math.round((vd - today) / 86400000);
-      $('visit-days').textContent = days === 0 ? 'Сегодня!' : days === 1 ? 'Завтра'
-        : days > 1 ? `Через ${days} дн.` : '';
+      $('visit-days').textContent = days === 0 ? T('todayBang') : days === 1 ? T('tomorrow')
+        : days > 1 ? T('inDays', { n: days }) : '';
     } catch {}
     if (view.nextVisit.confirmed) {
       $('visit-confirmed').style.display = '';
@@ -3403,15 +3647,28 @@ function render(view) {
       try {
         const d = new Date(st.date + 'T00:00:00');
         const days = Math.round((d - today) / 86400000);
-        when = days === 0 ? 'Сегодня' : days === 1 ? 'Завтра' : days > 1 ? 'Через ' + days + ' дн. · ' + d.toLocaleDateString('ru-RU') : 'Ждали к ' + d.toLocaleDateString('ru-RU');
+        when = days === 0 ? T('today') : days === 1 ? T('tomorrow') : days > 1 ? T('inDays', { n: days }) + ' · ' + d.toLocaleDateString('ru-RU') : T('waitedBy', { d: d.toLocaleDateString('ru-RU') });
       } catch {}
       const icon = st.kind === 'scale' ? '📊' : st.kind === 'visit' ? '🗓' : st.kind === 'lab' ? '🧪' : '📌';
       const btn = st.kind === 'scale' && st.scaleId && SCALES[st.scaleId]
-        ? '<div style="margin-top:6px;"><button data-scale="' + esc(st.scaleId) + '" class="scale-btn">Заполнить сейчас</button></div>'
-        : st.kind === 'visit' ? '<div style="margin-top:6px;"><button data-book="1" class="scale-btn">Записаться</button><div class="muted" style="margin-top:4px;">Бот пришлёт свободное время в чат — выберите кнопкой.</div></div>'
-        : st.kind === 'lab' ? '<div class="muted" style="margin-top:4px;">Результат пришлите фото в чат боту — он попадёт врачу в карту.</div>' : '';
+        ? '<div style="margin-top:6px;"><button data-scale="' + esc(st.scaleId) + '" class="scale-btn">' + esc(T('fillNow')) + '</button></div>'
+        : st.kind === 'visit' ? '<div style="margin-top:6px;"><button data-book="1" class="scale-btn">' + esc(T('bookNow')) + '</button><div class="muted" style="margin-top:4px;">' + esc(T('botSlots')) + '</div></div>'
+        : st.kind === 'lab' ? '<div class="muted" style="margin-top:4px;">' + esc(T('labPhoto')) + '</div>' : '';
       return '<div class="li">' + icon + ' <b>' + esc(st.title) + '</b><div class="muted">' + esc(when) + '</div>' + btn + '</div>';
     }).join('');
+  }
+
+  /* ✅ Сегодня — чек-лист врача. Отметки живут на телефоне по дате, чтобы при
+     повторном открытии в тот же день не сбрасывались; уходят врачу кнопкой
+     или вместе с чек-ином настроения. */
+  renderToday(view.todayActions || []);
+
+  /* 📚 Понять своё состояние — карточки по треку врача */
+  const cards = view.track && PSYCHOED[view.track];
+  if (cards && cards.length) {
+    $('pe-card').style.display = '';
+    $('pe-body').innerHTML = cards.map((c, i) => '<details' + (i === 0 ? ' open' : '') + '><summary>' + esc(c[0]) + '</summary><p>' + esc(c[1]) + '</p></details>').join('')
+      + (lang !== 'ru' ? '<div class="muted" style="margin-top:6px;">' + esc(T('peNote')) + '</div>' : '');
   }
 
   if (view.plan && (view.plan.title || (view.plan.goals || []).length)) {
@@ -3422,7 +3679,8 @@ function render(view) {
   }
 
   const rxRows = []
-    .concat((view.prescriptions || []).map((r) => '<div class="li">💊 <b>' + esc(r.name) + '</b>' + (r.dosage ? ' · ' + esc(r.dosage) : '') + (r.frequency ? ' · ' + esc(r.frequency) : '') + (r.duration ? ' · ' + esc(r.duration) : '') + '</div>'))
+    .concat((view.prescriptions || []).map((r) => '<div class="li">💊 <b>' + esc(r.name) + '</b>' + (r.dosage ? ' · ' + esc(r.dosage) : '') + (r.frequency ? ' · ' + esc(r.frequency) : '') + (r.duration ? ' · ' + esc(r.duration) : '')
+      + (r.purpose ? '<div class="rx-why">💡 ' + esc(T('why')) + ': ' + esc(r.purpose) + '</div>' : '') + '</div>'))
     .concat((view.interventions || []).map((iv) => '<div class="li">🧩 <b>' + esc(iv.name) + '</b>' + (iv.intensity ? ' · ' + esc(iv.intensity) : '') + (iv.who ? ' · ' + esc(iv.who) : '') + '</div>'));
   if (rxRows.length) { $('rx-card').style.display = ''; $('rx-body').innerHTML = rxRows.join(''); }
 
@@ -3439,7 +3697,7 @@ function render(view) {
       const step = pts.length > 1 ? 100 / (pts.length - 1) : 0;
       const poly = pts.map((p, i) => (i * step).toFixed(1) + ',' + (30 - ((p.score - min) / span) * 24 + 4).toFixed(1)).join(' ');
       const last = pts[pts.length - 1];
-      return '<div class="li"><b>' + esc(s.scaleName) + '</b> · последний балл: <b>' + esc(last.score) + '</b>' + (s.label ? ' <span class="muted">' + esc(s.label) + '</span>' : '') +
+      return '<div class="li"><b>' + esc(s.scaleName) + '</b> · ' + esc(T('lastScore')) + ': <b>' + esc(last.score) + '</b>' + (s.label ? ' <span class="muted">' + esc(s.label) + '</span>' : '') +
         '<svg class="spark" viewBox="0 0 100 38" preserveAspectRatio="none"><polyline points="' + poly + '" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
     }).join('');
   }
@@ -3449,7 +3707,7 @@ function render(view) {
     $('log-card').style.display = '';
     $('log-body').innerHTML = msgs.map((m) => {
       const d = String(m.at || '').split('-').slice(1).reverse().join('.');
-      return '<div class="li" style="font-size:13.5px;"><span style="color:var(--hint);">' + esc(d) + ' · ' + (m.dir === 'in' ? 'Вы' : 'Клиника') + ':</span> ' + esc(m.text) + '</div>';
+      return '<div class="li" style="font-size:13.5px;"><span style="color:var(--hint);">' + esc(d) + ' · ' + esc(m.dir === 'in' ? T('you') : T('clinic')) + ':</span> ' + esc(m.text) + '</div>';
     }).join('');
   }
 
@@ -3459,15 +3717,47 @@ function render(view) {
     (safety.clinicPhones ? '<div style="margin-top:4px;">Клиника: <b>' + esc(safety.clinicPhones) + '</b></div>' : '');
   $('crisis-clinic').innerHTML = safety.clinicPhones ? '📞 Клиника: <b>' + esc(safety.clinicPhones) + '</b>' : '';
 
-  $('footer').textContent = 'МирМед · кабинет пациента · данные хранятся на этом телефоне';
+  $('footer').textContent = T('footer');
 }
 
-/* ── Визит: приду / перенести ── */
-$('visit-yes').addEventListener('click', () => confirmSend('Подтвердить, что придёте?', { t: 'visit', a: 'yes' }));
-$('visit-no').addEventListener('click', () => confirmSend('Попросить врача перенести визит? Бот пришлёт свободное время в чат.', { t: 'visit', a: 'no' }));
+/* ── ✅ Сегодня: чек-лист действий ── */
+let todayItems = [];
+const todayKey = () => 'mm_actions_' + new Date().toISOString().slice(0, 10);
+function readDone() { try { return JSON.parse(localStorage.getItem(todayKey()) || '[]'); } catch { return []; } }
+function writeDone(ids) { try { localStorage.setItem(todayKey(), JSON.stringify(ids)); } catch {} }
+function doneIds() { return todayItems.filter((a) => a.done).map((a) => a.id); }
+function renderToday(items) {
+  todayItems = (items || []).filter((a) => a && a.id && a.text).slice(0, 6);
+  if (!todayItems.length) { $('today-card').style.display = 'none'; return; }
+  const done = new Set(readDone());
+  todayItems.forEach((a) => { a.done = done.has(a.id); });
+  $('today-card').style.display = '';
+  $('today-body').innerHTML = todayItems.map((a) =>
+    '<label class="chk' + (a.done ? ' done' : '') + '"><input type="checkbox" data-id="' + esc(a.id) + '"' + (a.done ? ' checked' : '') + '><span>' + esc(a.text) + '</span></label>').join('');
+  $('today-send').disabled = !doneIds().length;
+}
+$('today-body').addEventListener('change', (e) => {
+  const cb = e.target.closest('input[data-id]');
+  if (!cb) return;
+  const a = todayItems.find((x) => x.id === cb.dataset.id);
+  if (a) a.done = cb.checked;
+  cb.closest('.chk').classList.toggle('done', cb.checked);
+  writeDone(doneIds());
+  $('today-send').disabled = !doneIds().length;
+});
+$('today-send').addEventListener('click', () => {
+  const done = doneIds();
+  if (!done.length) return;
+  confirmSend('confirmActions', { t: 'actions', done, total: todayItems.length });
+});
 
-/* ── Чек-ин настроения ── */
+/* ── Визит: приду / перенести ── */
+$('visit-yes').addEventListener('click', () => confirmSend('confirmVisitYes', { t: 'visit', a: 'yes' }));
+$('visit-no').addEventListener('click', () => confirmSend('confirmVisitNo', { t: 'visit', a: 'no' }));
+
+/* ── Чек-ин настроения (+ сон прошлой ночи, + отметки действий) ── */
 let mood = 0;
+let sleepH = null;
 const moodSendState = () => {
   // Кнопка живая, как только есть смайлик ИЛИ текст — а не молча серая
   $('mood-send').disabled = !(mood || $('mood-note').value.trim());
@@ -3479,16 +3769,27 @@ $('mood-row').addEventListener('click', (e) => {
   document.querySelectorAll('.mood').forEach((x) => x.classList.toggle('sel', x === b));
   moodSendState();
 });
+$('sleep-row').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const h = Number(b.dataset.h);
+  sleepH = sleepH === h ? null : h; // повторный тап снимает выбор
+  $('sleep-row').querySelectorAll('button').forEach((x) => x.classList.toggle('sel', sleepH !== null && x === b));
+});
 $('mood-note').addEventListener('input', moodSendState);
 $('mood-send').addEventListener('click', () => {
   if (!mood) {
     // Настроение — главный сигнал для мониторинга: просим выбрать, а не шлём пустоту
-    const msg = 'Выберите смайлик настроения — это главное, что нужно врачу.';
+    const msg = T('pickMood');
     if (tg && tg.showAlert) tg.showAlert(msg); else alert(msg);
     $('mood-row').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
-  confirmSend('Отправить самочувствие врачу?', { t: 'checkin', mood, note: $('mood-note').value.trim().slice(0, 400) });
+  const payload = { t: 'checkin', mood, note: $('mood-note').value.trim().slice(0, 400) };
+  if (sleepH !== null) payload.sleep = sleepH;
+  const done = doneIds();
+  if (done.length) payload.done = done; // отметки дня уезжают вместе с чек-ином — одна отправка
+  confirmSend('confirmCheckin', payload);
 });
 
 /* ── 👨‍👩‍👧 Родительский дневник (guardian-режим) ── */
@@ -3505,26 +3806,57 @@ document.querySelectorAll('#diary-card .seg').forEach((seg) => {
 });
 $('diary-send').addEventListener('click', () => {
   if (!diaryReady()) return;
-  confirmSend('Отправить дневник дня врачу?', {
+  confirmSend('confirmDiary', {
     t: 'diary', sleep: diary.sleep, appetite: diary.appetite, outbursts: diary.outbursts,
     note: $('diary-note').value.trim().slice(0, 400)
   });
 });
 
 /* ── Связь с врачом: запись + сообщение ── */
-$('btn-book').addEventListener('click', () =>
-  confirmSend('Запросить запись на приём? Бот пришлёт свободное время в чат.', { t: 'book' }));
+$('btn-book').addEventListener('click', () => confirmSend('confirmBook', { t: 'book' }));
 // 📎 Файлы через мини-приложение отправить нельзя (Telegram не даёт кабинету
 // доступа к вложениям) — кнопка закрывает кабинет, и бот подсказывает в чате,
 // как прислать фото/PDF скрепкой.
-$('btn-doc').addEventListener('click', () =>
-  confirmSend('Отправить анализ? Кабинет закроется, а бот подскажет в чате, как прикрепить файл.', { t: 'doc' }));
+$('btn-doc').addEventListener('click', () => confirmSend('confirmDoc', { t: 'doc' }));
 $('msg-text').addEventListener('input', () => { $('msg-send').disabled = !$('msg-text').value.trim(); });
 $('msg-send').addEventListener('click', () => {
   const text = $('msg-text').value.trim().slice(0, 900);
   if (!text) return;
-  confirmSend('Отправить сообщение врачу?', { t: 'msg', text });
+  confirmSend('confirmMsg', { t: 'msg', text });
 });
+
+/* ── 🆘 SOS из шапки: кризисный экран с телефонами, без привязки к опроснику ── */
+$('sos-btn').addEventListener('click', () => {
+  $('crisis-lead').textContent = T('crisisSos');
+  $('crisis-continue').textContent = T('crisisClose');
+  $('crisis-overlay').classList.add('active');
+  $('crisis-continue').onclick = () => {
+    $('crisis-overlay').classList.remove('active');
+    $('crisis-lead').textContent = T('crisisLead');
+    $('crisis-continue').textContent = T('crisisContinue');
+  };
+});
+
+/* ── 🌐 RU / TJ ── */
+$('lang-btn').addEventListener('click', () => {
+  lang = lang === 'tg' ? 'ru' : 'tg';
+  try { localStorage.setItem('mm_lang', lang); } catch {}
+  applyI18n();
+  // Динамические тексты (приветствие, «через N дн.», карточки) — перерисовать из кэша
+  const v = readCache();
+  resetDynamic();
+  render(v);
+  showPending();
+});
+/* Скрыть карточки, которые render показывает по данным, — перед повторным рендером */
+function resetDynamic() {
+  ['note-card', 'visit-card', 'dx-card', 'steps-card', 'today-card', 'plan-card', 'rx-card', 'rec-card', 'progress-card', 'pe-card', 'log-card', 'diary-card']
+    .forEach((id) => { $(id).style.display = 'none'; });
+  $('visit-confirmed').style.display = 'none';
+  $('visit-yes').style.display = '';
+  $('who').style.display = 'none';
+  $('mood-card').style.display = '';
+}
 
 /* ── Опросники ── */
 let run = null; // { def, idx, answers }
@@ -3545,7 +3877,7 @@ function renderQuestion() {
   const { def, idx } = run;
   const q = def.questions[idx];
   const opts = (q.options && q.options.length) ? q.options : def.options; // у части шкал варианты свои на вопрос
-  $('q-progress').textContent = 'Вопрос ' + (idx + 1) + ' из ' + def.questions.length;
+  $('q-progress').textContent = T('question', { n: idx + 1, m: def.questions.length });
   $('q-text').textContent = q.text;
   $('q-opts').innerHTML = opts.map((o) =>
     '<button class="opt" data-v="' + o.value + '">' + esc(o.label) + '</button>').join('');
@@ -3576,7 +3908,7 @@ function answer(value, btn) {
 }
 function finishScale() {
   const { def, answers } = run;
-  confirmSend('Отправить ответы врачу?', { t: 'scale', id: def.id, answers });
+  confirmSend('confirmScale', { t: 'scale', id: def.id, answers });
   // если пациент отменил отправку — оставляем экран, можно отправить ещё раз
   sent = false;
 }
@@ -3584,13 +3916,14 @@ function finishScale() {
 /* Кнопка опросника есть и в «Что дальше» — один обработчик на оба блока. */
 ['scales-row', 'steps-body'].forEach((id) => $(id).addEventListener('click', (e) => {
   const bk = e.target.closest('[data-book]');
-  if (bk) { confirmSend('Попросить врача записать вас на приём? Бот пришлёт свободное время в чат.', { t: 'visit', a: 'book' }); return; }
+  if (bk) { confirmSend('confirmStepBook', { t: 'visit', a: 'book' }); return; }
   const b = e.target.closest('.scale-btn');
   if (b && b.dataset.scale) startScale(b.dataset.scale);
 }));
 $('scale-back').addEventListener('click', () => { run = null; showScreen('scr-home'); });
 
-loadView().then(render);
+applyI18n();
+loadView().then((v) => { render(v); showPending(); });
 </script>
 </body>
 </html>
